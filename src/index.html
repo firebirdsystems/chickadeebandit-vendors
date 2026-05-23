@@ -262,6 +262,7 @@
 
 <script type="module">
 import { memberColor, initial, esc, hubConfirm } from "/hub-sdk.js";
+import { CATEGORIES, avgRating, starsInfo, filterVendors } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
@@ -276,7 +277,6 @@ let members    = [];
 let activeCategory = "all";
 let searchQuery    = "";
 
-const CATEGORIES = ["Contractor","Handyman","Landscaper","Plumber","Electrician","Service","Other"];
 
 // ─── DB helper ────────────────────────────────────────────────────────────
 async function db(sql, params = []) {
@@ -331,11 +331,7 @@ async function loadData() {
 // ─── Helpers ──────────────────────────────────────────────────────────────
 function reviewsFor(vendorId) { return allReviews.filter(r => r.vendor_id === vendorId); }
 
-function avgRating(vendorId) {
-  const rs = reviewsFor(vendorId);
-  if (!rs.length) return null;
-  return rs.reduce((s, r) => s + r.rating, 0) / rs.length;
-}
+function avgRatingFor(vendorId) { return avgRating(reviewsFor(vendorId)); }
 
 function memberName(id) { return members.find(m => m.id === id)?.name ?? "Unknown"; }
 function mc(id) { return memberColor(id, members); }
@@ -353,20 +349,7 @@ function categoryBadge(cat) {
 }
 
 function filteredVendors() {
-  return vendors.filter(v => {
-    const matchesCat = activeCategory === "all" || v.category === activeCategory;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
-      v.name.toLowerCase().includes(q) ||
-      v.category.toLowerCase().includes(q) ||
-      v.address.toLowerCase().includes(q) ||
-      v.notes.toLowerCase().includes(q);
-    return matchesCat && matchesSearch;
-  }).sort((a, b) => {
-    const ra = avgRating(a.id) ?? -1;
-    const rb = avgRating(b.id) ?? -1;
-    return rb - ra || new Date(b.created_at) - new Date(a.created_at);
-  });
+  return filterVendors(vendors, allReviews, activeCategory, searchQuery);
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────
@@ -455,6 +438,9 @@ window.submitVendorForm = async function(existingId) {
   const notes    = document.getElementById("f-notes").value.trim();
   if (!name) { document.getElementById("f-name").focus(); return; }
 
+  const btn = modalEl?.querySelector('.modal-actions .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
   if (existingId) {
     await editVendor(existingId, { name, category, phone, website, address, notes });
   } else {
@@ -511,6 +497,8 @@ window.openReviewForm = function(vendorId) {
 window.submitReview = async function(vendorId) {
   if (!reviewRating) return;
   const comment = document.getElementById("f-review-text").value.trim();
+  const btn = modalEl?.querySelector('.modal-actions .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   const now = new Date().toISOString();
   const existing = allReviews.find(r => r.vendor_id === vendorId && r.member_id === ME?.id);
   if (existing) {
@@ -546,7 +534,7 @@ window.deleteReview = async function(reviewId) {
 // ─── Vendor detail modal ──────────────────────────────────────────────────
 function openVendorDetail(vendor) {
   const rs         = reviewsFor(vendor.id);
-  const avg        = avgRating(vendor.id);
+  const avg        = avgRatingFor(vendor.id);
   const myReview   = rs.find(r => r.member_id === ME?.id);
   const canReview  = !!ME;
   const canEdit    = ME?.id === vendor.added_by;
@@ -662,7 +650,7 @@ async function editVendor(vendorId, fields) {
 
 // ─── Render ───────────────────────────────────────────────────────────────
 function renderVendorCard(v) {
-  const avg = avgRating(v.id);
+  const avg = avgRatingFor(v.id);
   const rs  = reviewsFor(v.id);
   return `
     <div class="vendor-card" onclick="openVendorDetailById('${v.id}')">
