@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Recommendations</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           var(--hub-bg, #f9fafb);
+      --card:         var(--hub-surface, #ffffff);
+      --border:       var(--hub-border, #e5e7eb);
+      --text:         var(--hub-text, #111827);
+      --muted:        var(--hub-text-muted, #6b7280);
+      --accent:       var(--hub-primary, #111827);
+      --accent-fg:    var(--hub-primary-fg, #ffffff);
+      --accent-hover: var(--hub-primary-hover, #374151);
+      --green:  #16a34a; --green-light:  #dcfce7;
+      --amber:  #d97706; --amber-light:  #fef3c7;
+      --blue:   #2563eb; --blue-light:   #dbeafe;
+      --red:    #dc2626; --red-light:    #fee2e2;
+      --radius: var(--hub-radius, 0.5rem);
+      --shadow: 0 1px 3px rgba(0,0,0,.07);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: var(--hub-font-size, 15px);
+      line-height: 1.5;
+    }
+
+    .app { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+    /* ── Header ──────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 16px 20px;
+      background: var(--accent);
+      border-radius: var(--radius);
+      color: white;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header .sub { font-size: 0.8rem; opacity: .75; margin-top: 2px; }
+
+    /* ── Buttons ─────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity .15s;
+    }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-danger:hover:not(:disabled) { opacity: .88; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-link-danger {
+      background: none; border: none; cursor: pointer;
+      font-size: 0.78rem; color: var(--red); font-weight: 500; padding: 4px 6px;
+    }
+    .btn-link-danger:hover { text-decoration: underline; }
+
+    /* ── Search + filter ─────────────────────────────── */
+    .toolbar { margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .search-input {
+      width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 9px 12px; font-size: 0.95rem; font-family: inherit;
+      outline: none; background: var(--card);
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+
+    .cat-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cat-pill {
+      padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+      font-size: 0.8rem; font-weight: 600; cursor: pointer; background: var(--card);
+      color: var(--muted); transition: all .15s;
+    }
+    .cat-pill:hover { border-color: var(--accent); color: var(--text); }
+    .cat-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* ── Vendor cards ────────────────────────────────── */
+    .vendor-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+      cursor: pointer; box-shadow: var(--shadow);
+      transition: border-color .15s, box-shadow .15s;
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .vendor-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+
+    .vendor-main { flex: 1; min-width: 0; }
+    .vendor-name { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+    .vendor-meta {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem; color: var(--muted); flex-wrap: wrap; margin-bottom: 4px;
+    }
+    .vendor-contact { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+    .vendor-contact a { color: var(--muted); text-decoration: none; }
+    .vendor-contact a:hover { color: var(--text); text-decoration: underline; }
+
+    /* ── Category badges ─────────────────────────────── */
+    .cat-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; white-space: nowrap;
+      background: #f3f4f6; color: #374151;
+    }
+    .cat-badge.cat-contractor   { background: #dbeafe; color: #1d4ed8; }
+    .cat-badge.cat-handyman     { background: #fef3c7; color: #b45309; }
+    .cat-badge.cat-landscaper   { background: #dcfce7; color: #15803d; }
+    .cat-badge.cat-plumber      { background: #e0f2fe; color: #0369a1; }
+    .cat-badge.cat-electrician  { background: #fef9c3; color: #a16207; }
+    .cat-badge.cat-service      { background: #f3e8ff; color: #7e22ce; }
+    .cat-badge.cat-other        { background: #f3f4f6; color: #374151; }
+
+    /* ── Stars ───────────────────────────────────────── */
+    .stars { color: #f59e0b; font-size: 0.85rem; letter-spacing: 1px; }
+    .stars-sm { color: #f59e0b; font-size: 0.8rem; letter-spacing: 1px; }
+    .stars-md { color: #f59e0b; font-size: 0.95rem; letter-spacing: 1px; }
+    .no-rating { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+    .rating-count { font-size: 0.78rem; color: var(--muted); }
+
+    .stars-picker { display: flex; gap: 6px; margin-top: 4px; }
+    .star-pick {
+      font-size: 1.6rem; cursor: pointer; color: #d1d5db;
+      transition: color .1s, transform .1s; user-select: none;
+      line-height: 1;
+    }
+    .star-pick:hover,
+    .star-pick.on { color: #f59e0b; }
+    .star-pick:hover { transform: scale(1.15); }
+
+    /* ── Avatar ──────────────────────────────────────── */
+    .avatar {
+      border-radius: 50%; display: inline-flex;
+      align-items: center; justify-content: center;
+      font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .avatar.sm { width: 24px; height: 24px; font-size: 0.7rem; }
+    .member-inline { display: flex; align-items: center; gap: 6px; }
+
+    /* ── Modal ───────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+    }
+    @media (min-width: 480px) {
+      .modal-backdrop { align-items: center; padding: 20px; }
+    }
+    .modal {
+      background: white; border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%; max-width: 520px; padding: 24px;
+      max-height: 92vh; overflow-y: auto;
+    }
+    @media (min-width: 480px) { .modal { border-radius: var(--radius); } }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+
+    /* ── Forms ───────────────────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: var(--muted); margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 9px 12px; font-size: 0.95rem; font-family: inherit;
+      outline: none; transition: border-color .15s; background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .req { color: var(--red); }
+
+    .modal-actions {
+      display: flex; gap: 8px; margin-top: 20px;
+      flex-wrap: wrap; align-items: center;
+    }
+    .modal-actions .btn { flex: 1; justify-content: center; min-width: 100px; }
+    .modal-actions .btn-danger { flex: 0; }
+
+    /* ── Vendor detail ───────────────────────────────── */
+    .detail-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 12px; margin-bottom: 14px;
+    }
+    .detail-header h3 { margin-bottom: 0; }
+
+    .contact-grid {
+      display: flex; flex-direction: column; gap: 6px;
+      background: #f9fafb; border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px; margin-bottom: 12px;
+    }
+    .contact-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.875rem; color: var(--text); text-decoration: none;
+    }
+    .contact-item:hover { color: var(--accent); }
+    .contact-icon { font-size: 1rem; flex-shrink: 0; }
+
+    .vendor-notes-detail {
+      font-size: 0.9rem; color: var(--muted); margin-bottom: 14px;
+      line-height: 1.55; font-style: italic;
+    }
+
+    /* ── Reviews ─────────────────────────────────────── */
+    .reviews-section { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 4px; }
+    .reviews-title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .review-card {
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 8px; background: var(--card);
+    }
+    .review-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .review-author { font-size: 0.85rem; font-weight: 600; }
+    .review-comment { font-size: 0.875rem; color: var(--text); margin-bottom: 6px; line-height: 1.5; }
+    .review-footer { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .upvote-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.78rem; padding: 3px 10px; border-radius: 20px;
+      border: 1.5px solid var(--border); background: transparent;
+      cursor: pointer; color: var(--muted); font-weight: 600;
+      transition: all .15s;
+    }
+    .upvote-btn:hover:not(.upvoted):not(.disabled) { border-color: var(--accent); color: var(--accent); }
+    .upvote-btn.upvoted { border-color: var(--accent); background: #f0f0f0; color: var(--accent); cursor: default; }
+    .upvote-btn.disabled { cursor: default; opacity: .6; }
+
+    .no-reviews { font-size: 0.875rem; color: var(--muted); padding: 12px 0; display: flex; align-items: center; gap: 10px; }
+
+    /* ── Misc ────────────────────────────────────────── */
+    .empty { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 0.9rem; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .vendor-count { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+  </style>
+  <base href="/run/vendors/" />
+</head>
+<body>
+<div class="app" id="root"><div class="loading">Loading…</div></div>
+
+<script type="module">
+import { memberColor, initial, esc, hubConfirm } from "/hub-sdk.js";
+
+const CONTEXT = window.__CONTEXT_URL ?? "";
+const DB      = window.__DB_URL      ?? "";
+const APP_ID  = window.__APP_ID      ?? "vendors";
+const ME      = window.__CURRENT_MEMBER ?? null;
+
+// ─── State ────────────────────────────────────────────────────────────────
+let vendors    = [];
+let allReviews = [];
+let myUpvotes  = new Set();
+let members    = [];
+let activeCategory = "all";
+let searchQuery    = "";
+
+const CATEGORIES = ["Contractor","Handyman","Landscaper","Plumber","Electrician","Service","Other"];
+
+// ─── DB helper ────────────────────────────────────────────────────────────
+async function db(sql, params = []) {
+  if (!DB) return { rows: [] };
+  const res = await fetch(DB, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sql, params }),
+  });
+  return res.json();
+}
+
+// ─── Load ─────────────────────────────────────────────────────────────────
+async function loadMembers() {
+  if (!CONTEXT) {
+    members = [
+      { id: "demo-1", name: "Alex",   role: "adult" },
+      { id: "demo-2", name: "Jordan", role: "adult" },
+      { id: "demo-3", name: "Casey",  role: "adult" },
+    ];
+    return;
+  }
+  try {
+    const res = await fetch(`${CONTEXT}?keys=family.members`);
+    members = ((await res.json())["family.members"]) ?? [];
+  } catch { members = []; }
+}
+
+async function loadData() {
+  if (!DB) {
+    vendors = [
+      { id: "d1", name: "Mike's Handyman", category: "Handyman", phone: "555-111-2222", website: "", address: "Local", notes: "Great with drywall.", added_by: "demo-1", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" },
+      { id: "d2", name: "Green Thumb Landscaping", category: "Landscaper", phone: "", website: "https://greenthumb.example.com", address: "", notes: "", added_by: "demo-2", created_at: "2026-01-02T00:00:00Z", updated_at: "2026-01-02T00:00:00Z" },
+    ];
+    allReviews = [
+      { id: "r1", vendor_id: "d1", member_id: "demo-2", rating: 5, comment: "Super reliable, shows up on time!", upvotes: 2, created_at: "2026-01-03T00:00:00Z" },
+      { id: "r2", vendor_id: "d1", member_id: "demo-3", rating: 4, comment: "Good work, reasonable price.", upvotes: 1, created_at: "2026-01-04T00:00:00Z" },
+      { id: "r3", vendor_id: "d2", member_id: "demo-1", rating: 5, comment: "Lawn looks amazing!", upvotes: 3, created_at: "2026-01-05T00:00:00Z" },
+    ];
+    return;
+  }
+  const [v, r, u] = await Promise.all([
+    db(`SELECT * FROM vendors ORDER BY created_at DESC`),
+    db(`SELECT * FROM reviews ORDER BY created_at ASC`),
+    ME ? db(`SELECT review_id FROM review_upvotes WHERE member_id = ?`, [ME.id]) : Promise.resolve({ rows: [] }),
+  ]);
+  vendors    = v.rows ?? [];
+  allReviews = r.rows ?? [];
+  myUpvotes  = new Set((u.rows ?? []).map(r => r.review_id));
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function reviewsFor(vendorId) { return allReviews.filter(r => r.vendor_id === vendorId); }
+
+function avgRating(vendorId) {
+  const rs = reviewsFor(vendorId);
+  if (!rs.length) return null;
+  return rs.reduce((s, r) => s + r.rating, 0) / rs.length;
+}
+
+function memberName(id) { return members.find(m => m.id === id)?.name ?? "Unknown"; }
+function mc(id) { return memberColor(id, members); }
+
+function starsDisplay(rating, cls = "stars") {
+  if (rating === null) return `<span class="no-rating">No reviews yet</span>`;
+  const full  = Math.round(rating);
+  const empty = 5 - full;
+  return `<span class="${cls}">${"★".repeat(full)}${"☆".repeat(empty)}</span>`;
+}
+
+function categoryBadge(cat) {
+  const slug = (cat || "Other").toLowerCase().replace(/\s+/g, "-");
+  return `<span class="cat-badge cat-${slug}">${esc(cat || "Other")}</span>`;
+}
+
+function filteredVendors() {
+  return vendors.filter(v => {
+    const matchesCat = activeCategory === "all" || v.category === activeCategory;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      v.name.toLowerCase().includes(q) ||
+      v.category.toLowerCase().includes(q) ||
+      v.address.toLowerCase().includes(q) ||
+      v.notes.toLowerCase().includes(q);
+    return matchesCat && matchesSearch;
+  }).sort((a, b) => {
+    const ra = avgRating(a.id) ?? -1;
+    const rb = avgRating(b.id) ?? -1;
+    return rb - ra || new Date(b.created_at) - new Date(a.created_at);
+  });
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────
+let modalEl = null;
+function openModal(html) {
+  closeModal();
+  modalEl = document.createElement("div");
+  modalEl.className = "modal-backdrop";
+  modalEl.innerHTML = `<div class="modal">${html}</div>`;
+  modalEl.addEventListener("click", e => { if (e.target === modalEl) closeModal(); });
+  document.body.appendChild(modalEl);
+}
+function closeModal() { modalEl?.remove(); modalEl = null; }
+window.closeModal = closeModal;
+
+// ─── Add/Edit Vendor Form ─────────────────────────────────────────────────
+let vendorRating = 0;
+
+window.pickVendorStar = function(n) {
+  vendorRating = n;
+  document.querySelectorAll(".vendor-star-pick").forEach((el, i) => el.classList.toggle("on", i < n));
+  const group = document.getElementById("vendor-review-group");
+  if (group) group.style.display = n > 0 ? "" : "none";
+};
+
+function openVendorForm(vendor = null) {
+  vendorRating = 0;
+  const isEdit = !!vendor;
+  const catOptions = CATEGORIES.map(c =>
+    `<option value="${c}" ${vendor?.category === c ? "selected" : ""}>${c}</option>`
+  ).join("");
+
+  openModal(`
+    <h3>${isEdit ? "Edit Vendor" : "Add Vendor"}</h3>
+    <div class="form-group">
+      <label>Business name <span class="req">*</span></label>
+      <input id="f-name" type="text" value="${esc(vendor?.name ?? "")}" placeholder="Mike's Handyman Service" autofocus />
+    </div>
+    <div class="form-group">
+      <label>Category <span class="req">*</span></label>
+      <select id="f-category">${catOptions}</select>
+    </div>
+    <div class="form-group">
+      <label>Phone</label>
+      <input id="f-phone" type="tel" value="${esc(vendor?.phone ?? "")}" placeholder="555-000-1234" />
+    </div>
+    <div class="form-group">
+      <label>Website</label>
+      <input id="f-website" type="url" value="${esc(vendor?.website ?? "")}" placeholder="https://example.com" />
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input id="f-address" type="text" value="${esc(vendor?.address ?? "")}" placeholder="123 Main St" />
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="f-notes" rows="2" placeholder="Any notes about this vendor…">${esc(vendor?.notes ?? "")}</textarea>
+    </div>
+    ${!isEdit ? `
+    <div class="form-group">
+      <label>Your rating <span style="font-weight:400;text-transform:none;color:var(--muted)">(optional)</span></label>
+      <div class="stars-picker">
+        ${[1,2,3,4,5].map(n => `<span class="star-pick vendor-star-pick" onclick="pickVendorStar(${n})">★</span>`).join("")}
+      </div>
+    </div>
+    <div class="form-group" id="vendor-review-group" style="display:none">
+      <label>Your review</label>
+      <textarea id="f-review-comment" rows="2" placeholder="Write a review…"></textarea>
+    </div>` : ""}
+    <div class="modal-actions">
+      ${isEdit && ME?.id === vendor?.added_by ? `<button class="btn btn-danger btn-sm" onclick="confirmDeleteVendor('${vendor.id}')">Remove</button>` : ""}
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitVendorForm('${vendor?.id ?? ""}')">
+        ${isEdit ? "Save" : "Add Vendor"}
+      </button>
+    </div>
+  `);
+}
+
+window.submitVendorForm = async function(existingId) {
+  const name     = document.getElementById("f-name").value.trim();
+  const category = document.getElementById("f-category").value;
+  const phone    = document.getElementById("f-phone").value.trim();
+  const website  = document.getElementById("f-website").value.trim();
+  const address  = document.getElementById("f-address").value.trim();
+  const notes    = document.getElementById("f-notes").value.trim();
+  if (!name) { document.getElementById("f-name").focus(); return; }
+
+  if (existingId) {
+    await editVendor(existingId, { name, category, phone, website, address, notes });
+  } else {
+    const comment = document.getElementById("f-review-comment")?.value.trim() ?? "";
+    await addVendor({ name, category, phone, website, address, notes, rating: vendorRating || null, comment });
+  }
+};
+
+window.confirmDeleteVendor = async function(vendorId) {
+  if (!await hubConfirm({ message: "Remove this vendor from the directory?", confirmLabel: "Remove" })) return;
+  await db(`DELETE FROM review_upvotes WHERE review_id IN (SELECT id FROM reviews WHERE vendor_id = ?)`, [vendorId]);
+  await db(`DELETE FROM reviews WHERE vendor_id = ?`, [vendorId]);
+  await db(`DELETE FROM vendors WHERE id = ?`, [vendorId]);
+  await loadData();
+  closeModal();
+  render();
+};
+
+// ─── Review form ──────────────────────────────────────────────────────────
+let reviewRating = 0;
+
+window.pickReviewStar = function(n) {
+  reviewRating = n;
+  document.querySelectorAll(".review-star-pick").forEach((el, i) => el.classList.toggle("on", i < n));
+};
+
+window.openReviewForm = function(vendorId) {
+  const existing = allReviews.find(r => r.vendor_id === vendorId && r.member_id === ME?.id);
+  reviewRating = existing?.rating ?? 0;
+
+  openModal(`
+    <h3>${existing ? "Edit Your Review" : "Write a Review"}</h3>
+    <div class="form-group">
+      <label>Rating <span class="req">*</span></label>
+      <div class="stars-picker">
+        ${[1,2,3,4,5].map(n =>
+          `<span class="star-pick review-star-pick ${n <= reviewRating ? "on" : ""}" onclick="pickReviewStar(${n})">★</span>`
+        ).join("")}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Review <span style="font-weight:400;text-transform:none;color:var(--muted)">(optional)</span></label>
+      <textarea id="f-review-text" rows="3" placeholder="Tell the family what you thought…">${esc(existing?.comment ?? "")}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="openVendorDetailById('${vendorId}')">Back</button>
+      <button class="btn btn-primary" onclick="submitReview('${vendorId}')">
+        ${existing ? "Save Review" : "Post Review"}
+      </button>
+    </div>
+  `);
+};
+
+window.submitReview = async function(vendorId) {
+  if (!reviewRating) return;
+  const comment = document.getElementById("f-review-text").value.trim();
+  const now = new Date().toISOString();
+  const existing = allReviews.find(r => r.vendor_id === vendorId && r.member_id === ME?.id);
+  if (existing) {
+    await db(`UPDATE reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
+  } else {
+    const id = crypto.randomUUID();
+    await db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 0, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
+  }
+  await loadData();
+  openVendorDetailById(vendorId);
+};
+
+window.upvoteReview = async function(reviewId) {
+  if (!ME || myUpvotes.has(reviewId)) return;
+  const now = new Date().toISOString();
+  await db(`INSERT INTO review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]);
+  await db(`UPDATE reviews SET upvotes = upvotes + 1, updated_at = ? WHERE id = ?`, [now, reviewId]);
+  await loadData();
+  const r = allReviews.find(r => r.id === reviewId);
+  if (r) openVendorDetailById(r.vendor_id);
+};
+
+window.deleteReview = async function(reviewId) {
+  if (!await hubConfirm({ message: "Delete your review?", confirmLabel: "Delete" })) return;
+  const r = allReviews.find(r => r.id === reviewId);
+  await db(`DELETE FROM review_upvotes WHERE review_id = ?`, [reviewId]);
+  await db(`DELETE FROM reviews WHERE id = ?`, [reviewId]);
+  await loadData();
+  if (r) openVendorDetailById(r.vendor_id);
+};
+
+// ─── Vendor detail modal ──────────────────────────────────────────────────
+function openVendorDetail(vendor) {
+  const rs         = reviewsFor(vendor.id);
+  const avg        = avgRating(vendor.id);
+  const myReview   = rs.find(r => r.member_id === ME?.id);
+  const canReview  = !!ME;
+  const canEdit    = ME?.id === vendor.added_by;
+  const addedBy    = memberName(vendor.added_by);
+
+  const reviewsHtml = rs.length === 0
+    ? `<div class="no-reviews">No reviews yet.${canReview
+        ? ` <button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Be the first</button>`
+        : ""}</div>`
+    : [...rs].sort((a, b) => b.upvotes - a.upvotes).map(r => {
+        const ismine  = r.member_id === ME?.id;
+        const upvoted = myUpvotes.has(r.id);
+        const canUpvote = ME && !ismine && !upvoted;
+        return `
+          <div class="review-card">
+            <div class="review-header">
+              <div class="member-inline">
+                <div class="avatar sm" style="background:${mc(r.member_id)}">${initial(memberName(r.member_id))}</div>
+                <span class="review-author">${esc(memberName(r.member_id))}</span>
+              </div>
+              <span class="stars-sm">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
+            </div>
+            ${r.comment ? `<p class="review-comment">${esc(r.comment)}</p>` : ""}
+            <div class="review-footer">
+              <button
+                class="upvote-btn ${upvoted ? "upvoted" : ""} ${!canUpvote && !upvoted ? "disabled" : ""}"
+                onclick="${canUpvote ? `upvoteReview('${r.id}')` : ""}">
+                👍 ${r.upvotes}
+              </button>
+              ${ismine ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Edit</button>` : ""}
+              ${ismine ? `<button class="btn-link-danger" onclick="deleteReview('${r.id}')">Delete</button>` : ""}
+            </div>
+          </div>`;
+      }).join("");
+
+  openModal(`
+    <div class="detail-header">
+      <div>
+        <h3>${esc(vendor.name)}</h3>
+        <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${categoryBadge(vendor.category)}
+          ${avg !== null
+            ? `${starsDisplay(avg, "stars-md")} <span class="rating-count">${avg.toFixed(1)} (${rs.length} review${rs.length !== 1 ? "s" : ""})</span>`
+            : `<span class="no-rating">No reviews</span>`}
+        </div>
+      </div>
+      ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openVendorFormById('${vendor.id}')">Edit</button>` : ""}
+    </div>
+
+    ${vendor.phone || vendor.website || vendor.address ? `
+    <div class="contact-grid">
+      ${vendor.phone    ? `<a href="tel:${esc(vendor.phone)}" class="contact-item"><span class="contact-icon">📞</span>${esc(vendor.phone)}</a>` : ""}
+      ${vendor.website  ? `<a href="${esc(vendor.website)}" target="_blank" rel="noopener" class="contact-item"><span class="contact-icon">🌐</span>${esc(vendor.website.replace(/^https?:\/\//, ""))}</a>` : ""}
+      ${vendor.address  ? `<div class="contact-item"><span class="contact-icon">📍</span>${esc(vendor.address)}</div>` : ""}
+    </div>` : ""}
+
+    ${vendor.notes ? `<p class="vendor-notes-detail">${esc(vendor.notes)}</p>` : ""}
+
+    <div class="reviews-section">
+      <div class="reviews-title-row">
+        <span class="section-title">Reviews (${rs.length})</span>
+        ${canReview && !myReview
+          ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">+ Add Review</button>`
+          : canReview && myReview
+          ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Edit my review</button>`
+          : ""}
+      </div>
+      ${reviewsHtml}
+    </div>
+
+    <div class="modal-actions">
+      <span style="font-size:.78rem;color:var(--muted);flex:1">Added by ${esc(addedBy)}</span>
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+
+window.openVendorDetailById = function(id) {
+  const v = vendors.find(v => v.id === id);
+  if (v) openVendorDetail(v);
+};
+window.openVendorFormById = function(id) {
+  const v = id ? vendors.find(v => v.id === id) : null;
+  openVendorForm(v);
+};
+
+// ─── Actions ──────────────────────────────────────────────────────────────
+async function addVendor(fields) {
+  const id  = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db(`INSERT INTO vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, ME?.id ?? "", now, now]);
+  if (fields.rating) {
+    const rid = crypto.randomUUID();
+    await db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+      [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
+  }
+  await loadData();
+  closeModal();
+  render();
+}
+
+async function editVendor(vendorId, fields) {
+  const now = new Date().toISOString();
+  await db(`UPDATE vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
+    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]);
+  await loadData();
+  closeModal();
+  render();
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function renderVendorCard(v) {
+  const avg = avgRating(v.id);
+  const rs  = reviewsFor(v.id);
+  return `
+    <div class="vendor-card" onclick="openVendorDetailById('${v.id}')">
+      <div class="vendor-main">
+        <div class="vendor-name">${esc(v.name)}</div>
+        <div class="vendor-meta">
+          ${categoryBadge(v.category)}
+          ${avg !== null
+            ? `${starsDisplay(avg)} <span class="rating-count">${avg.toFixed(1)} (${rs.length})</span>`
+            : `<span class="no-rating">No reviews</span>`}
+        </div>
+        ${v.phone || v.website ? `
+        <div class="vendor-contact">
+          ${v.phone  ? `📞 <a href="tel:${esc(v.phone)}" onclick="event.stopPropagation()">${esc(v.phone)}</a>` : ""}
+          ${v.phone && v.website ? " · " : ""}
+          ${v.website ? `🌐 <a href="${esc(v.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(v.website.replace(/^https?:\/\//, ""))}</a>` : ""}
+        </div>` : ""}
+      </div>
+    </div>`;
+}
+
+function render() {
+  const list = filteredVendors();
+  const catPills = ["all", ...CATEGORIES].map(c => {
+    const label = c === "all" ? "All" : c;
+    const count = c === "all" ? vendors.length : vendors.filter(v => v.category === c).length;
+    if (c !== "all" && count === 0) return "";
+    return `<button class="cat-pill ${activeCategory === c ? "active" : ""}" onclick="setCategory('${c}')">${label}${count > 0 && c !== "all" ? ` <span style="opacity:.65">${count}</span>` : ""}</button>`;
+  }).join("");
+
+  const listHtml = list.length === 0
+    ? `<div class="empty">${searchQuery || activeCategory !== "all"
+        ? "No vendors match your search."
+        : "No vendors yet — add the first one!"}</div>`
+    : list.map(renderVendorCard).join("");
+
+  document.getElementById("root").innerHTML = `
+    <header>
+      <div>
+        <h1>🏪 Vendor Recommendations</h1>
+        <div class="sub">Local contractors, handymen &amp; service providers</div>
+      </div>
+      ${ME ? `<button class="btn btn-ghost"
+        style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)"
+        onclick="openVendorFormById('')">+ Add</button>` : ""}
+    </header>
+
+    <div class="toolbar">
+      <input class="search-input" type="search" placeholder="Search vendors…"
+        value="${esc(searchQuery)}" oninput="onSearch(this.value)" />
+      <div class="cat-pills">${catPills}</div>
+    </div>
+
+    ${list.length > 0 ? `<div class="vendor-count">${list.length} vendor${list.length !== 1 ? "s" : ""}${activeCategory !== "all" ? ` · ${activeCategory}` : ""}</div>` : ""}
+    <div>${listHtml}</div>
+  `;
+}
+
+window.setCategory = function(cat) { activeCategory = cat; render(); };
+window.onSearch    = function(q)   { searchQuery = q; render(); };
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+(async () => {
+  await loadMembers();
+  await loadData();
+  render();
+})();
+</script>
+</body>
+</html>
