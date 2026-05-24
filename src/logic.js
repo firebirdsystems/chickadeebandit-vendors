@@ -3,7 +3,7 @@
  * No DOM, no fetch — importable in both browser and test environments.
  */
 
-export const CATEGORIES = ["Contractor", "Handyman", "Landscaper", "Plumber", "Electrician", "Service", "Other"];
+export const CATEGORIES = ["Contractor", "Handyman", "HVAC", "Landscaper", "Painter", "Plumber", "Electrician", "Septic", "Trash", "Service", "Other"];
 
 export function avgRating(reviews) {
   if (!reviews.length) return null;

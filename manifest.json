@@ -12,16 +12,12 @@
     "writes": []
   },
   "permissions": {
-    "default_audience": "everyone",
+    "default_audience": "adults",
     "requires_approval": false
   },
   "storage": "db",
   "nav": {
     "label": "Vendors"
-  },
-  "widget": {
-    "label": "Vendors",
-    "size": "small"
   },
   "resource_limits": {
     "max_db_bytes": 52428800
