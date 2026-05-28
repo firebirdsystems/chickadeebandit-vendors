@@ -5,7 +5,7 @@
   "description": "Community-curated directory of local contractors, handymen, landscapers, and service providers. Any member can add a vendor with contact info and a review; others can upvote or add their own.",
   "entrypoint": "index.html",
   "runtime": "static",
-  "category": "home",
+  "category": "general",
   "tags": ["vendors", "contractors", "recommendations", "directory", "local", "services"],
   "data_access": {
     "reads": ["family.members"],
