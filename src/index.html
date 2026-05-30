@@ -713,10 +713,17 @@ window.setCategory = function(cat) { activeCategory = cat; render(); };
 window.onSearch    = function(q)   { searchQuery = q; render(); };
 
 // ─── Init ─────────────────────────────────────────────────────────────────
+function handleDeepLink() {
+  const vendorId = new URLSearchParams(window.location.search).get("vendorId");
+  if (!vendorId) return;
+  openVendorDetailById(vendorId);
+}
+
 (async () => {
   await loadMembers();
   await loadData();
   render();
+  handleDeepLink();
 })();
 </script>
 </body>
