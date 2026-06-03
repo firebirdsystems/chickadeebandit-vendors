@@ -451,12 +451,17 @@ window.submitVendorForm = async function(existingId) {
 
 window.confirmDeleteVendor = async function(vendorId) {
   if (!await hubConfirm({ message: "Remove this vendor from the directory?", confirmLabel: "Remove" })) return;
-  await db(`DELETE FROM review_upvotes WHERE review_id IN (SELECT id FROM reviews WHERE vendor_id = ?)`, [vendorId]);
-  await db(`DELETE FROM reviews WHERE vendor_id = ?`, [vendorId]);
-  await db(`DELETE FROM vendors WHERE id = ?`, [vendorId]);
-  await loadData();
+  allReviews.filter(r => r.vendor_id === vendorId).forEach(r => myUpvotes.delete(r.id));
+  allReviews = allReviews.filter(r => r.vendor_id !== vendorId);
+  vendors = vendors.filter(v => v.id !== vendorId);
   closeModal();
   render();
+  // Upvotes → reviews → vendor (FK order); reviews and vendor can run in parallel after upvotes
+  db(`DELETE FROM review_upvotes WHERE review_id IN (SELECT id FROM reviews WHERE vendor_id = ?)`, [vendorId])
+    .then(() => Promise.all([
+      db(`DELETE FROM reviews WHERE vendor_id = ?`, [vendorId]),
+      db(`DELETE FROM vendors WHERE id = ?`, [vendorId]),
+    ]));
 };
 
 // ─── Review form ──────────────────────────────────────────────────────────
@@ -497,38 +502,45 @@ window.openReviewForm = function(vendorId) {
 window.submitReview = async function(vendorId) {
   if (!reviewRating) return;
   const comment = document.getElementById("f-review-text").value.trim();
-  const btn = modalEl?.querySelector('.modal-actions .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   const now = new Date().toISOString();
   const existing = allReviews.find(r => r.vendor_id === vendorId && r.member_id === ME?.id);
   if (existing) {
-    await db(`UPDATE reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
+    const idx = allReviews.indexOf(existing);
+    allReviews[idx] = { ...existing, rating: reviewRating, comment, updated_at: now };
+    openVendorDetailById(vendorId);
+    db(`UPDATE reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
   } else {
     const id = crypto.randomUUID();
-    await db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 0, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
+    allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, upvotes: 0, created_at: now, updated_at: now });
+    openVendorDetailById(vendorId);
+    db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
   }
-  await loadData();
-  openVendorDetailById(vendorId);
 };
 
-window.upvoteReview = async function(reviewId) {
+window.upvoteReview = function(reviewId) {
   if (!ME || myUpvotes.has(reviewId)) return;
   const now = new Date().toISOString();
-  await db(`INSERT INTO review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]);
-  await db(`UPDATE reviews SET upvotes = upvotes + 1, updated_at = ? WHERE id = ?`, [now, reviewId]);
-  await loadData();
-  const r = allReviews.find(r => r.id === reviewId);
+  myUpvotes.add(reviewId);
+  const idx = allReviews.findIndex(r => r.id === reviewId);
+  if (idx >= 0) allReviews[idx] = { ...allReviews[idx], upvotes: allReviews[idx].upvotes + 1 };
+  const r = allReviews[idx];
   if (r) openVendorDetailById(r.vendor_id);
+  Promise.all([
+    db(`INSERT INTO review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]),
+    db(`UPDATE reviews SET upvotes = upvotes + 1, updated_at = ? WHERE id = ?`, [now, reviewId]),
+  ]);
 };
 
 window.deleteReview = async function(reviewId) {
   if (!await hubConfirm({ message: "Delete your review?", confirmLabel: "Delete" })) return;
   const r = allReviews.find(r => r.id === reviewId);
-  await db(`DELETE FROM review_upvotes WHERE review_id = ?`, [reviewId]);
-  await db(`DELETE FROM reviews WHERE id = ?`, [reviewId]);
-  await loadData();
+  myUpvotes.delete(reviewId);
+  allReviews = allReviews.filter(r => r.id !== reviewId);
   if (r) openVendorDetailById(r.vendor_id);
+  // Upvotes must be deleted before review due to FK constraint
+  db(`DELETE FROM review_upvotes WHERE review_id = ?`, [reviewId])
+    .then(() => db(`DELETE FROM reviews WHERE id = ?`, [reviewId]));
 };
 
 // ─── Vendor detail modal ──────────────────────────────────────────────────
@@ -625,27 +637,33 @@ window.openVendorFormById = function(id) {
 async function addVendor(fields) {
   const id  = crypto.randomUUID();
   const now = new Date().toISOString();
+  vendors.unshift({ id, name: fields.name, category: fields.category, phone: fields.phone, website: fields.website, address: fields.address, notes: fields.notes, added_by: ME?.id ?? "", created_at: now, updated_at: now });
+  if (fields.rating) {
+    const rid = crypto.randomUUID();
+    allReviews.push({ id: rid, vendor_id: id, member_id: ME?.id ?? "", rating: fields.rating, comment: fields.comment ?? "", upvotes: 0, created_at: now, updated_at: now });
+  }
+  closeModal();
+  render();
+  // Vendor must be persisted before review due to FK constraint
   await db(`INSERT INTO vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, ME?.id ?? "", now, now]);
   if (fields.rating) {
-    const rid = crypto.randomUUID();
-    await db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+    const rid = allReviews.find(r => r.vendor_id === id)?.id ?? crypto.randomUUID();
+    db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
       [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
   }
-  await loadData();
-  closeModal();
-  render();
 }
 
 async function editVendor(vendorId, fields) {
   const now = new Date().toISOString();
-  await db(`UPDATE vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
-    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]);
-  await loadData();
+  const idx = vendors.findIndex(v => v.id === vendorId);
+  if (idx >= 0) vendors[idx] = { ...vendors[idx], ...fields, updated_at: now };
   closeModal();
   render();
+  db(`UPDATE vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
+    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]);
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────
@@ -720,8 +738,7 @@ function handleDeepLink() {
 }
 
 (async () => {
-  await loadMembers();
-  await loadData();
+  await Promise.all([loadMembers(), loadData()]);
   render();
   handleDeepLink();
 })();
