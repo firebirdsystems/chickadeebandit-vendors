@@ -319,9 +319,9 @@ async function loadData() {
     return;
   }
   const [v, r, u] = await Promise.all([
-    db(`SELECT * FROM vendors ORDER BY created_at DESC`),
-    db(`SELECT * FROM reviews ORDER BY created_at ASC`),
-    ME ? db(`SELECT review_id FROM review_upvotes WHERE member_id = ?`, [ME.id]) : Promise.resolve({ rows: [] }),
+    db(`SELECT * FROM app_vendors__vendors ORDER BY created_at DESC`),
+    db(`SELECT * FROM app_vendors__reviews ORDER BY created_at ASC`),
+    ME ? db(`SELECT review_id FROM app_vendors__review_upvotes WHERE member_id = ?`, [ME.id]) : Promise.resolve({ rows: [] }),
   ]);
   vendors    = v.rows ?? [];
   allReviews = r.rows ?? [];
@@ -457,10 +457,10 @@ window.confirmDeleteVendor = async function(vendorId) {
   closeModal();
   render();
   // Upvotes → reviews → vendor (FK order); reviews and vendor can run in parallel after upvotes
-  db(`DELETE FROM review_upvotes WHERE review_id IN (SELECT id FROM reviews WHERE vendor_id = ?)`, [vendorId])
+  db(`DELETE FROM app_vendors__review_upvotes WHERE review_id IN (SELECT id FROM app_vendors__reviews WHERE vendor_id = ?)`, [vendorId])
     .then(() => Promise.all([
-      db(`DELETE FROM reviews WHERE vendor_id = ?`, [vendorId]),
-      db(`DELETE FROM vendors WHERE id = ?`, [vendorId]),
+      db(`DELETE FROM app_vendors__reviews WHERE vendor_id = ?`, [vendorId]),
+      db(`DELETE FROM app_vendors__vendors WHERE id = ?`, [vendorId]),
     ]));
 };
 
@@ -508,12 +508,12 @@ window.submitReview = async function(vendorId) {
     const idx = allReviews.indexOf(existing);
     allReviews[idx] = { ...existing, rating: reviewRating, comment, updated_at: now };
     openVendorDetailById(vendorId);
-    db(`UPDATE reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
+    db(`UPDATE app_vendors__reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
   } else {
     const id = crypto.randomUUID();
     allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, upvotes: 0, created_at: now, updated_at: now });
     openVendorDetailById(vendorId);
-    db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
+    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, 0, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
   }
 };
@@ -527,8 +527,8 @@ window.upvoteReview = function(reviewId) {
   const r = allReviews[idx];
   if (r) openVendorDetailById(r.vendor_id);
   Promise.all([
-    db(`INSERT INTO review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]),
-    db(`UPDATE reviews SET upvotes = upvotes + 1, updated_at = ? WHERE id = ?`, [now, reviewId]),
+    db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]),
+    db(`UPDATE app_vendors__reviews SET upvotes = upvotes + 1, updated_at = ? WHERE id = ?`, [now, reviewId]),
   ]);
 };
 
@@ -539,8 +539,8 @@ window.deleteReview = async function(reviewId) {
   allReviews = allReviews.filter(r => r.id !== reviewId);
   if (r) openVendorDetailById(r.vendor_id);
   // Upvotes must be deleted before review due to FK constraint
-  db(`DELETE FROM review_upvotes WHERE review_id = ?`, [reviewId])
-    .then(() => db(`DELETE FROM reviews WHERE id = ?`, [reviewId]));
+  db(`DELETE FROM app_vendors__review_upvotes WHERE review_id = ?`, [reviewId])
+    .then(() => db(`DELETE FROM app_vendors__reviews WHERE id = ?`, [reviewId]));
 };
 
 // ─── Vendor detail modal ──────────────────────────────────────────────────
@@ -645,12 +645,12 @@ async function addVendor(fields) {
   closeModal();
   render();
   // Vendor must be persisted before review due to FK constraint
-  await db(`INSERT INTO vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at)
+  await db(`INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, ME?.id ?? "", now, now]);
   if (fields.rating) {
     const rid = allReviews.find(r => r.vendor_id === id)?.id ?? crypto.randomUUID();
-    db(`INSERT INTO reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
+    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
       [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
   }
@@ -662,7 +662,7 @@ async function editVendor(vendorId, fields) {
   if (idx >= 0) vendors[idx] = { ...vendors[idx], ...fields, updated_at: now };
   closeModal();
   render();
-  db(`UPDATE vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
+  db(`UPDATE app_vendors__vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
     [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]);
 }
 

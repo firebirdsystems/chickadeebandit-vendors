@@ -1,5 +1,4 @@
-CREATE TABLE IF NOT EXISTS vendors (
-  household_id UUID    NOT NULL DEFAULT current_setting('app.household_id', true)::uuid,
+CREATE TABLE IF NOT EXISTS app_vendors__vendors (
   id           TEXT    NOT NULL,
   name         TEXT    NOT NULL,
   category     TEXT    NOT NULL,
@@ -10,11 +9,10 @@ CREATE TABLE IF NOT EXISTS vendors (
   added_by     TEXT    NOT NULL DEFAULT '',
   created_at   TEXT    NOT NULL,
   updated_at   TEXT    NOT NULL,
-  PRIMARY KEY (household_id, id)
+  PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS reviews (
-  household_id UUID    NOT NULL DEFAULT current_setting('app.household_id', true)::uuid,
+CREATE TABLE IF NOT EXISTS app_vendors__reviews (
   id           TEXT    NOT NULL,
   vendor_id    TEXT    NOT NULL,
   member_id    TEXT    NOT NULL,
@@ -23,12 +21,11 @@ CREATE TABLE IF NOT EXISTS reviews (
   upvotes      INTEGER NOT NULL DEFAULT 0,
   created_at   TEXT    NOT NULL,
   updated_at   TEXT    NOT NULL,
-  PRIMARY KEY (household_id, id)
+  PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS review_upvotes (
-  household_id UUID NOT NULL DEFAULT current_setting('app.household_id', true)::uuid,
+CREATE TABLE IF NOT EXISTS app_vendors__review_upvotes (
   review_id    TEXT NOT NULL,
   member_id    TEXT NOT NULL,
-  PRIMARY KEY (household_id, review_id, member_id)
+  PRIMARY KEY (review_id, member_id)
 );
