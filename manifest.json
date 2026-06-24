@@ -27,5 +27,23 @@
     "allowed": true,
     "mode": "read",
     "db_exports": ["all_vendors"]
+  },
+  "row_policies": {
+    "app_vendors__vendors": {
+      "kind": "owner_only",
+      "member_column": "added_by",
+      "adults_bypass": true
+    },
+    "app_vendors__reviews": {
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": true
+    },
+    "app_vendors__review_upvotes": {
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": true,
+      "member_can_update": false
+    }
   }
 }

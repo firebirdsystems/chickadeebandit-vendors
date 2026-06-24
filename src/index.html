@@ -270,10 +270,11 @@ const APP_ID  = window.__APP_ID      ?? "vendors";
 const ME      = window.__CURRENT_MEMBER ?? null;
 
 // ─── State ────────────────────────────────────────────────────────────────
-let vendors    = [];
-let allReviews = [];
-let myUpvotes  = new Set();
-let members    = [];
+let vendors      = [];
+let allReviews   = [];
+let myUpvotes    = new Set();
+let upvoteCounts = new Map();
+let members      = [];
 let activeCategory = "all";
 let searchQuery    = "";
 
@@ -312,23 +313,41 @@ async function loadData() {
       { id: "d2", name: "Green Thumb Landscaping", category: "Landscaper", phone: "", website: "https://greenthumb.example.com", address: "", notes: "", added_by: "demo-2", created_at: "2026-01-02T00:00:00Z", updated_at: "2026-01-02T00:00:00Z" },
     ];
     allReviews = [
-      { id: "r1", vendor_id: "d1", member_id: "demo-2", rating: 5, comment: "Super reliable, shows up on time!", upvotes: 2, created_at: "2026-01-03T00:00:00Z" },
-      { id: "r2", vendor_id: "d1", member_id: "demo-3", rating: 4, comment: "Good work, reasonable price.", upvotes: 1, created_at: "2026-01-04T00:00:00Z" },
-      { id: "r3", vendor_id: "d2", member_id: "demo-1", rating: 5, comment: "Lawn looks amazing!", upvotes: 3, created_at: "2026-01-05T00:00:00Z" },
+      { id: "r1", vendor_id: "d1", member_id: "demo-2", rating: 5, comment: "Super reliable, shows up on time!", created_at: "2026-01-03T00:00:00Z" },
+      { id: "r2", vendor_id: "d1", member_id: "demo-3", rating: 4, comment: "Good work, reasonable price.", created_at: "2026-01-04T00:00:00Z" },
+      { id: "r3", vendor_id: "d2", member_id: "demo-1", rating: 5, comment: "Lawn looks amazing!", created_at: "2026-01-05T00:00:00Z" },
     ];
+    upvoteCounts = new Map([["r1", 2], ["r2", 1], ["r3", 3]]);
     return;
   }
-  const [v, r, u] = await Promise.all([
-    db(`SELECT * FROM app_vendors__vendors ORDER BY created_at DESC`),
-    db(`SELECT * FROM app_vendors__reviews ORDER BY created_at ASC`),
+  const [v, r, u, uc] = await Promise.all([
+    db(`SELECT * FROM app_vendors__vendors ORDER BY created_at DESC LIMIT 500`),
+    db(`SELECT * FROM app_vendors__reviews ORDER BY created_at ASC LIMIT 500`),
     ME ? db(`SELECT review_id FROM app_vendors__review_upvotes WHERE member_id = ?`, [ME.id]) : Promise.resolve({ rows: [] }),
+    db(`SELECT review_id, COUNT(*) as count FROM app_vendors__review_upvotes GROUP BY review_id`),
   ]);
-  vendors    = v.rows ?? [];
-  allReviews = r.rows ?? [];
-  myUpvotes  = new Set((u.rows ?? []).map(r => r.review_id));
+  vendors      = v.rows ?? [];
+  allReviews   = r.rows ?? [];
+  myUpvotes    = new Set((u.rows ?? []).map(r => r.review_id));
+  upvoteCounts = new Map((uc.rows ?? []).map(r => [r.review_id, r.count]));
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
+function safeUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return (u.protocol === "https:" || u.protocol === "http:") ? url : null;
+  } catch { return null; }
+}
+
+function websiteLink(url, stopProp = false) {
+  if (!url) return "";
+  const display = esc(url.replace(/^https?:\/\//, ""));
+  if (!safeUrl(url)) return esc(url);
+  return `<a href="${esc(url)}" target="_blank" rel="noopener"${stopProp ? ' onclick="event.stopPropagation()"' : ""}>${display}</a>`;
+}
+
 function reviewsFor(vendorId) { return allReviews.filter(r => r.vendor_id === vendorId); }
 
 function avgRatingFor(vendorId) { return avgRating(reviewsFor(vendorId)); }
@@ -511,25 +530,20 @@ window.submitReview = async function(vendorId) {
     db(`UPDATE app_vendors__reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
   } else {
     const id = crypto.randomUUID();
-    allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, upvotes: 0, created_at: now, updated_at: now });
+    allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, created_at: now, updated_at: now });
     openVendorDetailById(vendorId);
-    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 0, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
+    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
   }
 };
 
 window.upvoteReview = function(reviewId) {
   if (!ME || myUpvotes.has(reviewId)) return;
-  const now = new Date().toISOString();
   myUpvotes.add(reviewId);
-  const idx = allReviews.findIndex(r => r.id === reviewId);
-  if (idx >= 0) allReviews[idx] = { ...allReviews[idx], upvotes: allReviews[idx].upvotes + 1 };
-  const r = allReviews[idx];
+  upvoteCounts.set(reviewId, (upvoteCounts.get(reviewId) ?? 0) + 1);
+  const r = allReviews.find(r => r.id === reviewId);
   if (r) openVendorDetailById(r.vendor_id);
-  Promise.all([
-    db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]),
-    db(`UPDATE app_vendors__reviews SET upvotes = upvotes + 1, updated_at = ? WHERE id = ?`, [now, reviewId]),
-  ]);
+  db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]);
 };
 
 window.deleteReview = async function(reviewId) {
@@ -556,7 +570,7 @@ function openVendorDetail(vendor) {
     ? `<div class="no-reviews">No reviews yet.${canReview
         ? ` <button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Be the first</button>`
         : ""}</div>`
-    : [...rs].sort((a, b) => b.upvotes - a.upvotes).map(r => {
+    : [...rs].sort((a, b) => (upvoteCounts.get(b.id) ?? 0) - (upvoteCounts.get(a.id) ?? 0)).map(r => {
         const ismine  = r.member_id === ME?.id;
         const upvoted = myUpvotes.has(r.id);
         const canUpvote = ME && !ismine && !upvoted;
@@ -574,7 +588,7 @@ function openVendorDetail(vendor) {
               <button
                 class="upvote-btn ${upvoted ? "upvoted" : ""} ${!canUpvote && !upvoted ? "disabled" : ""}"
                 onclick="${canUpvote ? `upvoteReview('${r.id}')` : ""}">
-                👍 ${r.upvotes}
+                👍 ${upvoteCounts.get(r.id) ?? 0}
               </button>
               ${ismine ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Edit</button>` : ""}
               ${ismine ? `<button class="btn-link-danger" onclick="deleteReview('${r.id}')">Delete</button>` : ""}
@@ -599,7 +613,7 @@ function openVendorDetail(vendor) {
     ${vendor.phone || vendor.website || vendor.address ? `
     <div class="contact-grid">
       ${vendor.phone    ? `<a href="tel:${esc(vendor.phone)}" class="contact-item"><span class="contact-icon">📞</span>${esc(vendor.phone)}</a>` : ""}
-      ${vendor.website  ? `<a href="${esc(vendor.website)}" target="_blank" rel="noopener" class="contact-item"><span class="contact-icon">🌐</span>${esc(vendor.website.replace(/^https?:\/\//, ""))}</a>` : ""}
+      ${vendor.website  ? `<div class="contact-item"><span class="contact-icon">🌐</span>${websiteLink(vendor.website)}</div>` : ""}
       ${vendor.address  ? `<div class="contact-item"><span class="contact-icon">📍</span>${esc(vendor.address)}</div>` : ""}
     </div>` : ""}
 
@@ -640,7 +654,7 @@ async function addVendor(fields) {
   vendors.unshift({ id, name: fields.name, category: fields.category, phone: fields.phone, website: fields.website, address: fields.address, notes: fields.notes, added_by: ME?.id ?? "", created_at: now, updated_at: now });
   if (fields.rating) {
     const rid = crypto.randomUUID();
-    allReviews.push({ id: rid, vendor_id: id, member_id: ME?.id ?? "", rating: fields.rating, comment: fields.comment ?? "", upvotes: 0, created_at: now, updated_at: now });
+    allReviews.push({ id: rid, vendor_id: id, member_id: ME?.id ?? "", rating: fields.rating, comment: fields.comment ?? "", created_at: now, updated_at: now });
   }
   closeModal();
   render();
@@ -650,8 +664,8 @@ async function addVendor(fields) {
     [id, fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, ME?.id ?? "", now, now]);
   if (fields.rating) {
     const rid = allReviews.find(r => r.vendor_id === id)?.id ?? crypto.randomUUID();
-    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
   }
 }
@@ -684,7 +698,7 @@ function renderVendorCard(v) {
         <div class="vendor-contact">
           ${v.phone  ? `📞 <a href="tel:${esc(v.phone)}" onclick="event.stopPropagation()">${esc(v.phone)}</a>` : ""}
           ${v.phone && v.website ? " · " : ""}
-          ${v.website ? `🌐 <a href="${esc(v.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(v.website.replace(/^https?:\/\//, ""))}</a>` : ""}
+          ${v.website ? `🌐 ${websiteLink(v.website, true)}` : ""}
         </div>` : ""}
       </div>
     </div>`;
