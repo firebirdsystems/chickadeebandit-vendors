@@ -268,6 +268,10 @@ const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
 const APP_ID  = window.__APP_ID      ?? "vendors";
 const ME      = window.__CURRENT_MEMBER ?? null;
+// Adults act as the directory's moderators: the row policies let the creator OR
+// any adult edit/delete a vendor (true hub-admin isn't expressible in a row
+// policy). Mirror that in the UI so moderators see the controls.
+const ADULT   = ME?.role === "adult";
 
 // ─── State ────────────────────────────────────────────────────────────────
 let vendors      = [];
@@ -287,7 +291,27 @@ async function db(sql, params = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
   });
-  return res.json();
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.error) {
+    throw new Error(body.error ?? `Database request failed (${res.status})`);
+  }
+  return body;
+}
+
+// A persisted write failed after an optimistic update — tell the user and resync
+// local state from the server so the UI can't silently diverge.
+async function syncAfterError(err) {
+  alert(err?.message ?? "Save failed — reloading.");
+  try { await loadData(); } catch { /* keep last known state */ }
+  render();
+}
+
+// Safe interpolation of a value into an inline on* handler's JS-string argument.
+// HTML-escaping alone is insufficient there: the browser decodes entities BEFORE
+// compiling the handler, so a single quote would break out. JSON.stringify gives a
+// proper quoted string literal; esc() then makes it attribute-safe.
+function jsArg(value) {
+  return esc(JSON.stringify(String(value)));
 }
 
 // ─── Load ─────────────────────────────────────────────────────────────────
@@ -439,9 +463,9 @@ function openVendorForm(vendor = null) {
       <textarea id="f-review-comment" rows="2" placeholder="Write a review…"></textarea>
     </div>` : ""}
     <div class="modal-actions">
-      ${isEdit && ME?.id === vendor?.added_by ? `<button class="btn btn-danger btn-sm" onclick="confirmDeleteVendor('${vendor.id}')">Remove</button>` : ""}
+      ${isEdit && (ME?.id === vendor?.added_by || ADULT) ? `<button class="btn btn-danger btn-sm" onclick="confirmDeleteVendor(${jsArg(vendor.id)})">Remove</button>` : ""}
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitVendorForm('${vendor?.id ?? ""}')">
+      <button class="btn btn-primary" onclick="submitVendorForm(${jsArg(vendor?.id ?? "")})">
         ${isEdit ? "Save" : "Add Vendor"}
       </button>
     </div>
@@ -470,17 +494,24 @@ window.submitVendorForm = async function(existingId) {
 
 window.confirmDeleteVendor = async function(vendorId) {
   if (!await hubConfirm({ message: "Remove this vendor from the directory?", confirmLabel: "Remove" })) return;
-  allReviews.filter(r => r.vendor_id === vendorId).forEach(r => myUpvotes.delete(r.id));
+  // Capture this vendor's review ids BEFORE pruning local state — the cascade
+  // deletes upvotes by those ids. We can't use a `review_id IN (SELECT ...)`
+  // subquery: review_upvotes and reviews are both row-policy-governed, and the
+  // rewriter fails closed on a governed table referenced inside a subquery.
+  const reviewIds = allReviews.filter(r => r.vendor_id === vendorId).map(r => r.id);
+  reviewIds.forEach(id => myUpvotes.delete(id));
   allReviews = allReviews.filter(r => r.vendor_id !== vendorId);
   vendors = vendors.filter(v => v.id !== vendorId);
   closeModal();
   render();
-  // Upvotes → reviews → vendor (FK order); reviews and vendor can run in parallel after upvotes
-  db(`DELETE FROM app_vendors__review_upvotes WHERE review_id IN (SELECT id FROM app_vendors__reviews WHERE vendor_id = ?)`, [vendorId])
-    .then(() => Promise.all([
-      db(`DELETE FROM app_vendors__reviews WHERE vendor_id = ?`, [vendorId]),
-      db(`DELETE FROM app_vendors__vendors WHERE id = ?`, [vendorId]),
-    ]));
+  // Upvotes → reviews → vendor (FK order). Each is a single governed table.
+  const upvotesGone = reviewIds.length
+    ? db(`DELETE FROM app_vendors__review_upvotes WHERE review_id IN (${reviewIds.map(() => "?").join(",")})`, reviewIds)
+    : Promise.resolve();
+  upvotesGone.then(() => Promise.all([
+    db(`DELETE FROM app_vendors__reviews WHERE vendor_id = ?`, [vendorId]),
+    db(`DELETE FROM app_vendors__vendors WHERE id = ?`, [vendorId]),
+  ])).catch(syncAfterError);
 };
 
 // ─── Review form ──────────────────────────────────────────────────────────
@@ -510,8 +541,8 @@ window.openReviewForm = function(vendorId) {
       <textarea id="f-review-text" rows="3" placeholder="Tell the family what you thought…">${esc(existing?.comment ?? "")}</textarea>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="openVendorDetailById('${vendorId}')">Back</button>
-      <button class="btn btn-primary" onclick="submitReview('${vendorId}')">
+      <button class="btn btn-ghost" onclick="openVendorDetailById(${jsArg(vendorId)})">Back</button>
+      <button class="btn btn-primary" onclick="submitReview(${jsArg(vendorId)})">
         ${existing ? "Save Review" : "Post Review"}
       </button>
     </div>
@@ -527,13 +558,17 @@ window.submitReview = async function(vendorId) {
     const idx = allReviews.indexOf(existing);
     allReviews[idx] = { ...existing, rating: reviewRating, comment, updated_at: now };
     openVendorDetailById(vendorId);
-    db(`UPDATE app_vendors__reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]);
+    db(`UPDATE app_vendors__reviews SET rating = ?, comment = ?, updated_at = ? WHERE id = ?`, [reviewRating, comment, now, existing.id]).catch(syncAfterError);
   } else {
     const id = crypto.randomUUID();
     allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, created_at: now, updated_at: now });
     openVendorDetailById(vendorId);
+    // One review per member per vendor is enforced by a unique index (migration
+    // 004); upsert keeps a re-submit idempotent instead of throwing on the index.
     db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [id, vendorId, ME.id, reviewRating, comment, now, now]);
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (vendor_id, member_id) DO UPDATE SET rating = excluded.rating, comment = excluded.comment, updated_at = excluded.updated_at`,
+       [id, vendorId, ME.id, reviewRating, comment, now, now]).catch(syncAfterError);
   }
 };
 
@@ -543,7 +578,7 @@ window.upvoteReview = function(reviewId) {
   upvoteCounts.set(reviewId, (upvoteCounts.get(reviewId) ?? 0) + 1);
   const r = allReviews.find(r => r.id === reviewId);
   if (r) openVendorDetailById(r.vendor_id);
-  db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]);
+  db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?) ON CONFLICT (review_id, member_id) DO NOTHING`, [reviewId, ME.id]).catch(syncAfterError);
 };
 
 window.deleteReview = async function(reviewId) {
@@ -554,7 +589,8 @@ window.deleteReview = async function(reviewId) {
   if (r) openVendorDetailById(r.vendor_id);
   // Upvotes must be deleted before review due to FK constraint
   db(`DELETE FROM app_vendors__review_upvotes WHERE review_id = ?`, [reviewId])
-    .then(() => db(`DELETE FROM app_vendors__reviews WHERE id = ?`, [reviewId]));
+    .then(() => db(`DELETE FROM app_vendors__reviews WHERE id = ?`, [reviewId]))
+    .catch(syncAfterError);
 };
 
 // ─── Vendor detail modal ──────────────────────────────────────────────────
@@ -563,12 +599,12 @@ function openVendorDetail(vendor) {
   const avg        = avgRatingFor(vendor.id);
   const myReview   = rs.find(r => r.member_id === ME?.id);
   const canReview  = !!ME;
-  const canEdit    = ME?.id === vendor.added_by;
+  const canEdit    = ME?.id === vendor.added_by || ADULT;
   const addedBy    = memberName(vendor.added_by);
 
   const reviewsHtml = rs.length === 0
     ? `<div class="no-reviews">No reviews yet.${canReview
-        ? ` <button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Be the first</button>`
+        ? ` <button class="btn btn-ghost btn-sm" onclick="openReviewForm(${jsArg(vendor.id)})">Be the first</button>`
         : ""}</div>`
     : [...rs].sort((a, b) => (upvoteCounts.get(b.id) ?? 0) - (upvoteCounts.get(a.id) ?? 0)).map(r => {
         const ismine  = r.member_id === ME?.id;
@@ -587,11 +623,11 @@ function openVendorDetail(vendor) {
             <div class="review-footer">
               <button
                 class="upvote-btn ${upvoted ? "upvoted" : ""} ${!canUpvote && !upvoted ? "disabled" : ""}"
-                onclick="${canUpvote ? `upvoteReview('${r.id}')` : ""}">
+                onclick="${canUpvote ? `upvoteReview(${jsArg(r.id)})` : ""}">
                 👍 ${upvoteCounts.get(r.id) ?? 0}
               </button>
-              ${ismine ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Edit</button>` : ""}
-              ${ismine ? `<button class="btn-link-danger" onclick="deleteReview('${r.id}')">Delete</button>` : ""}
+              ${ismine ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm(${jsArg(vendor.id)})">Edit</button>` : ""}
+              ${ismine ? `<button class="btn-link-danger" onclick="deleteReview(${jsArg(r.id)})">Delete</button>` : ""}
             </div>
           </div>`;
       }).join("");
@@ -607,7 +643,7 @@ function openVendorDetail(vendor) {
             : `<span class="no-rating">No reviews</span>`}
         </div>
       </div>
-      ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openVendorFormById('${vendor.id}')">Edit</button>` : ""}
+      ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openVendorFormById(${jsArg(vendor.id)})">Edit</button>` : ""}
     </div>
 
     ${vendor.phone || vendor.website || vendor.address ? `
@@ -623,9 +659,9 @@ function openVendorDetail(vendor) {
       <div class="reviews-title-row">
         <span class="section-title">Reviews (${rs.length})</span>
         ${canReview && !myReview
-          ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">+ Add Review</button>`
+          ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm(${jsArg(vendor.id)})">+ Add Review</button>`
           : canReview && myReview
-          ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm('${vendor.id}')">Edit my review</button>`
+          ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm(${jsArg(vendor.id)})">Edit my review</button>`
           : ""}
       </div>
       ${reviewsHtml}
@@ -658,15 +694,20 @@ async function addVendor(fields) {
   }
   closeModal();
   render();
-  // Vendor must be persisted before review due to FK constraint
-  await db(`INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, ME?.id ?? "", now, now]);
-  if (fields.rating) {
-    const rid = allReviews.find(r => r.vendor_id === id)?.id ?? crypto.randomUUID();
-    db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
+  try {
+    // Vendor must be persisted before review due to FK constraint
+    await db(`INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, ME?.id ?? "", now, now]);
+    if (fields.rating) {
+      const rid = allReviews.find(r => r.vendor_id === id)?.id ?? crypto.randomUUID();
+      await db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (vendor_id, member_id) DO UPDATE SET rating = excluded.rating, comment = excluded.comment, updated_at = excluded.updated_at`,
+        [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
+    }
+  } catch (e) {
+    await syncAfterError(e);
   }
 }
 
@@ -677,7 +718,7 @@ async function editVendor(vendorId, fields) {
   closeModal();
   render();
   db(`UPDATE app_vendors__vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
-    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]);
+    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]).catch(syncAfterError);
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────
@@ -685,7 +726,7 @@ function renderVendorCard(v) {
   const avg = avgRatingFor(v.id);
   const rs  = reviewsFor(v.id);
   return `
-    <div class="vendor-card" onclick="openVendorDetailById('${v.id}')">
+    <div class="vendor-card" onclick="openVendorDetailById(${jsArg(v.id)})">
       <div class="vendor-main">
         <div class="vendor-name">${esc(v.name)}</div>
         <div class="vendor-meta">
