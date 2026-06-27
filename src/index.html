@@ -261,7 +261,7 @@
 <div class="app" id="root"><div class="loading">Loading…</div></div>
 
 <script type="module">
-import { memberColor, initial, esc, hubConfirm } from "/hub-sdk.js";
+import { hubAlert, memberColor, initial, esc, hubConfirm } from "/hub-sdk.js";
 import { CATEGORIES, avgRating, starsInfo, filterVendors } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -301,7 +301,7 @@ async function db(sql, params = []) {
 // A persisted write failed after an optimistic update — tell the user and resync
 // local state from the server so the UI can't silently diverge.
 async function syncAfterError(err) {
-  alert(err?.message ?? "Save failed — reloading.");
+  hubAlert(err?.message ?? "Save failed — reloading.");
   try { await loadData(); } catch { /* keep last known state */ }
   render();
 }
