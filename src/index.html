@@ -404,6 +404,9 @@ function openModal(html) {
   modalEl.innerHTML = `<div class="modal">${html}</div>`;
   modalEl.addEventListener("click", e => { if (e.target === modalEl) closeModal(); });
   document.body.appendChild(modalEl);
+  // Programmatic focus works inside cross-origin iframes (unlike the autofocus
+  // attribute, which the browser blocks) because it rides the user's click gesture.
+  modalEl.querySelector("[data-autofocus]")?.focus();
 }
 function closeModal() { modalEl?.remove(); modalEl = null; }
 window.closeModal = closeModal;
@@ -429,7 +432,7 @@ function openVendorForm(vendor = null) {
     <h3>${isEdit ? "Edit Vendor" : "Add Vendor"}</h3>
     <div class="form-group">
       <label>Business name <span class="req">*</span></label>
-      <input id="f-name" type="text" value="${esc(vendor?.name ?? "")}" placeholder="Mike's Handyman Service" autofocus />
+      <input id="f-name" type="text" value="${esc(vendor?.name ?? "")}" placeholder="Mike's Handyman Service" data-autofocus />
     </div>
     <div class="form-group">
       <label>Category <span class="req">*</span></label>
