@@ -566,11 +566,10 @@ window.submitReview = async function(vendorId) {
     const id = crypto.randomUUID();
     allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, created_at: now, updated_at: now });
     openVendorDetailById(vendorId);
-    // One review per member per vendor is enforced by a unique index (migration
-    // 004); upsert keeps a re-submit idempotent instead of throwing on the index.
+    // One review per member per vendor is enforced by unique_per_member, which
+    // also forbids upsert INSERTs — a duplicate throws and syncAfterError reloads.
     db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (vendor_id, member_id) DO UPDATE SET rating = excluded.rating, comment = excluded.comment, updated_at = excluded.updated_at`,
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
        [id, vendorId, ME.id, reviewRating, comment, now, now]).catch(syncAfterError);
   }
 };
@@ -581,7 +580,7 @@ window.upvoteReview = function(reviewId) {
   upvoteCounts.set(reviewId, (upvoteCounts.get(reviewId) ?? 0) + 1);
   const r = allReviews.find(r => r.id === reviewId);
   if (r) openVendorDetailById(r.vendor_id);
-  db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?) ON CONFLICT (review_id, member_id) DO NOTHING`, [reviewId, ME.id]).catch(syncAfterError);
+  db(`INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES (?, ?)`, [reviewId, ME.id]).catch(syncAfterError);
 };
 
 window.deleteReview = async function(reviewId) {
@@ -705,8 +704,7 @@ async function addVendor(fields) {
     if (fields.rating) {
       const rid = allReviews.find(r => r.vendor_id === id)?.id ?? crypto.randomUUID();
       await db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (vendor_id, member_id) DO UPDATE SET rating = excluded.rating, comment = excluded.comment, updated_at = excluded.updated_at`,
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
     }
   } catch (e) {

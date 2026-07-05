@@ -13,5 +13,5 @@ FROM app_vendors__vendors v
 LEFT JOIN app_vendors__reviews r
   ON r.vendor_id    = v.id
 GROUP BY v.id, v.name, v.category, v.phone, v.website, v.address, v.notes, v.added_by
-ORDER BY v.category, avg_rating DESC NULLS LAST, v.name
+ORDER BY v.category, (avg_rating IS NULL), avg_rating DESC, v.name
 LIMIT 500

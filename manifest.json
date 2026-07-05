@@ -1,7 +1,7 @@
 {
   "id": "vendors",
   "name": "Vendor Recommendations",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "description": "Community-curated directory of local contractors, handymen, landscapers, and service providers. Any member can add a vendor with contact info and a review; others can upvote or add their own.",
   "entrypoint": "index.html",
   "runtime": "static",
@@ -39,13 +39,21 @@
       "kind": "owner_or_visibility",
       "member_column": "member_id",
       "visibility_column": "visibility",
-      "everyone_values": ["everyone"]
+      "everyone_values": ["everyone"],
+      "unique_per_member": {
+        "member_column": "member_id",
+        "scope_columns": ["vendor_id"]
+      }
     },
     "review_upvotes": {
       "kind": "owner_or_visibility",
       "member_column": "member_id",
       "visibility_column": "visibility",
-      "everyone_values": ["everyone"]
+      "everyone_values": ["everyone"],
+      "unique_per_member": {
+        "member_column": "member_id",
+        "scope_columns": ["review_id"]
+      }
     }
   }
 }
