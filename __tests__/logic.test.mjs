@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CATEGORIES, avgRating, starsInfo, filterVendors } from "../src/logic.js";
+import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating } from "../src/logic.js";
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,49 @@ describe("avgRating", () => {
 
   it("handles a single review", () => {
     expect(avgRating([{ rating: 3 }])).toBe(3);
+  });
+
+  it("clamps out-of-range / non-numeric ratings written via raw /api/db", () => {
+    // A member could POST arbitrary values bypassing the 1–5 UI. The average
+    // must stay bounded and never propagate a value that would crash repeat().
+    expect(avgRating([{ rating: 999999999 }])).toBe(5);
+    expect(avgRating([{ rating: -4 }])).toBe(0);
+    expect(avgRating([{ rating: "abc" }])).toBe(0);
+    expect(avgRating([{ rating: 5 }, { rating: 999999999 }])).toBe(5);
+  });
+});
+
+// ── clampRating ───────────────────────────────────────────────────────────────
+
+describe("clampRating", () => {
+  it("passes through valid whole ratings", () => {
+    for (const n of [0, 1, 2, 3, 4, 5]) expect(clampRating(n)).toBe(n);
+  });
+
+  it("rounds fractional ratings", () => {
+    expect(clampRating(3.4)).toBe(3);
+    expect(clampRating(3.6)).toBe(4);
+  });
+
+  it("clamps out-of-range values so repeat() can never throw", () => {
+    expect(clampRating(999999999)).toBe(5);
+    expect(clampRating(-100)).toBe(0);
+    expect(clampRating(6)).toBe(5);
+  });
+
+  it("coerces non-numeric / non-finite values to 0", () => {
+    expect(clampRating("abc")).toBe(0);
+    expect(clampRating(NaN)).toBe(0);
+    expect(clampRating(Infinity)).toBe(0);
+    expect(clampRating(null)).toBe(0);
+    expect(clampRating(undefined)).toBe(0);
+  });
+
+  it("keeps its output a safe argument for String.prototype.repeat", () => {
+    for (const bad of [999999999, -100, "x", NaN, Infinity, 2.5]) {
+      const n = clampRating(bad);
+      expect(() => "★".repeat(n) + "☆".repeat(5 - n)).not.toThrow();
+    }
   });
 });
 

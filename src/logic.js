@@ -5,14 +5,25 @@
 
 export const CATEGORIES = ["Contractor", "Handyman", "HVAC", "Landscaper", "Painter", "Plumber", "Electrician", "Septic", "Trash", "Service", "Other"];
 
+// Ratings are stored as INTEGER, but SQLite type affinity is not enforcement:
+// any member can write an out-of-range or non-numeric `rating` via raw /api/db.
+// Turning such a value into stars with String.prototype.repeat() would throw a
+// RangeError (negative / > 2^28) and crash the render for everyone. Clamp every
+// rating to a whole 0–5 before it reaches repeat() or an average.
+export function clampRating(rating) {
+  const n = Math.round(Number(rating));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(5, n));
+}
+
 export function avgRating(reviews) {
   if (!reviews.length) return null;
-  return reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+  return reviews.reduce((s, r) => s + clampRating(r.rating), 0) / reviews.length;
 }
 
 export function starsInfo(rating) {
   if (rating === null) return { full: 0, empty: 5, noRating: true };
-  const full  = Math.round(rating);
+  const full  = clampRating(rating);
   const empty = 5 - full;
   return { full, empty, noRating: false };
 }

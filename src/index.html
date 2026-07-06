@@ -262,7 +262,7 @@
 
 <script type="module">
 import { hubAlert, memberColor, initial, esc, hubConfirm } from "/hub-sdk.js";
-import { CATEGORIES, avgRating, starsInfo, filterVendors } from "./logic.js";
+import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
@@ -619,7 +619,7 @@ function openVendorDetail(vendor) {
                 <div class="avatar sm" style="background:${mc(r.member_id)}">${initial(memberName(r.member_id))}</div>
                 <span class="review-author">${esc(memberName(r.member_id))}</span>
               </div>
-              <span class="stars-sm">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
+              <span class="stars-sm">${"★".repeat(clampRating(r.rating))}${"☆".repeat(5 - clampRating(r.rating))}</span>
             </div>
             ${r.comment ? `<p class="review-comment">${esc(r.comment)}</p>` : ""}
             <div class="review-footer">
