@@ -348,12 +348,12 @@ async function loadData() {
     db(`SELECT * FROM app_vendors__vendors ORDER BY created_at DESC LIMIT 500`),
     db(`SELECT * FROM app_vendors__reviews ORDER BY created_at ASC LIMIT 500`),
     ME ? db(`SELECT review_id FROM app_vendors__review_upvotes WHERE member_id = ?`, [ME.id]) : Promise.resolve({ rows: [] }),
-    db(`SELECT review_id, COUNT(*) as count FROM app_vendors__review_upvotes GROUP BY review_id`),
+    db(`SELECT review_id, COUNT(*) as n FROM app_vendors__review_upvotes GROUP BY review_id`),
   ]);
   vendors      = v.rows ?? [];
   allReviews   = r.rows ?? [];
   myUpvotes    = new Set((u.rows ?? []).map(r => r.review_id));
-  upvoteCounts = new Map((uc.rows ?? []).map(r => [r.review_id, r.count]));
+  upvoteCounts = new Map((uc.rows ?? []).map(r => [r.review_id, r.n]));
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

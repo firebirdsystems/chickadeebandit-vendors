@@ -1,0 +1,43 @@
+{
+  "scenarios": [
+    {
+      "name": "one review per member per vendor and one upvote per member per review",
+      "members": { "reviewer": "adult", "other": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vendors__vendors (id, name, category, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, 'everyone')",
+          "params": ["vd1", "Ace Plumbing", "plumbing", "{{other}}", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]
+        },
+        {
+          "action": "db",
+          "as": "reviewer",
+          "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, 'great', ?, ?, 'everyone')",
+          "params": ["rv1", "vd1", "{{reviewer}}", "2026-01-02T00:00:00Z", "2026-01-02T00:00:00Z"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "reviewer",
+          "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at, visibility) VALUES (?, ?, ?, 1, 'changed my mind', ?, ?, 'everyone')",
+          "params": ["rv2", "vd1", "{{reviewer}}", "2026-01-03T00:00:00Z", "2026-01-03T00:00:00Z"],
+          "expect": { "status": 403 }
+        },
+        {
+          "action": "db",
+          "as": "other",
+          "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, 'everyone')",
+          "params": ["rv1", "{{other}}"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "other",
+          "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, 'everyone')",
+          "params": ["rv1", "{{other}}"],
+          "expect": { "status": 403 }
+        }
+      ]
+    }
+  ]
+}
