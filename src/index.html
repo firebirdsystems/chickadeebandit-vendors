@@ -566,7 +566,7 @@ window.submitReview = async function(vendorId) {
     const id = crypto.randomUUID();
     allReviews.push({ id, vendor_id: vendorId, member_id: ME.id, rating: reviewRating, comment, created_at: now, updated_at: now });
     openVendorDetailById(vendorId);
-    // One review per member per vendor is enforced by unique_per_member, which
+    // One review per member per vendor is enforced by max_per_member, which
     // also forbids upsert INSERTs — a duplicate throws and syncAfterError reloads.
     db(`INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,

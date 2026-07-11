@@ -40,9 +40,10 @@
       "member_column": "member_id",
       "visibility_column": "visibility",
       "everyone_values": ["everyone"],
-      "unique_per_member": {
+      "max_per_member": {
         "member_column": "member_id",
-        "scope_columns": ["vendor_id"]
+        "scope_columns": ["vendor_id"],
+        "limit": 1
       }
     },
     "review_upvotes": {
@@ -50,9 +51,10 @@
       "member_column": "member_id",
       "visibility_column": "visibility",
       "everyone_values": ["everyone"],
-      "unique_per_member": {
+      "max_per_member": {
         "member_column": "member_id",
-        "scope_columns": ["review_id"]
+        "scope_columns": ["review_id"],
+        "limit": 1
       }
     }
   }
