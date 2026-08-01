@@ -268,10 +268,19 @@ const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
 const APP_ID  = window.__APP_ID      ?? "vendors";
 const ME      = window.__CURRENT_MEMBER ?? null;
-// Adults act as the directory's moderators: the row policies let the creator OR
-// any adult edit/delete a vendor (true hub-admin isn't expressible in a row
-// policy). Mirror that in the UI so moderators see the controls.
-const ADULT   = ME?.role === "adult";
+// Who moderates the directory: the row policies let the creator OR a
+// *supervisor* edit/delete a vendor. Supervision is not the same thing as
+// "adult" in both tenant kinds — in a household every adult supervises, but in
+// a shared space every participant is an adult and supervision belongs to the
+// steward alone (resolvePolicyRoles, policy-roles.ts).
+//
+// Gating on the role alone therefore showed every participant in a space a
+// Delete button the hub then refused, and the refusal was a silent no-op: the
+// policy narrows the statement rather than erroring, so the row simply did not
+// change while the UI had already removed it.
+const IS_SPACE  = window.__TENANT_KIND === "shared_space";
+const IS_ADMIN  = window.__IS_ADMIN === true;
+const ADULT     = IS_SPACE ? IS_ADMIN : ME?.role === "adult";
 
 // ─── State ────────────────────────────────────────────────────────────────
 let vendors      = [];
@@ -290,6 +299,25 @@ async function db(sql, params = []) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.error) {
+    throw new Error(body.error ?? `Database request failed (${res.status})`);
+  }
+  return body;
+}
+
+/** Runtime limits the batched /api/db form enforces. */
+const MAX_BATCH_STATEMENTS = 10;
+const MAX_SQL_PARAMS = 100;
+
+/** Several statements as one transaction — all apply, or none does. */
+async function dbBatch(statements) {
+  if (!DB || statements.length === 0) return { results: [] };
+  const res = await fetch(DB, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ statements }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body.error) {
@@ -507,14 +535,39 @@ window.confirmDeleteVendor = async function(vendorId) {
   vendors = vendors.filter(v => v.id !== vendorId);
   closeModal();
   render();
-  // Upvotes → reviews → vendor (FK order). Each is a single governed table.
-  const upvotesGone = reviewIds.length
-    ? db(`DELETE FROM app_vendors__review_upvotes WHERE review_id IN (${reviewIds.map(() => "?").join(",")})`, reviewIds)
-    : Promise.resolve();
-  upvotesGone.then(() => Promise.all([
-    db(`DELETE FROM app_vendors__reviews WHERE vendor_id = ?`, [vendorId]),
-    db(`DELETE FROM app_vendors__vendors WHERE id = ?`, [vendorId]),
-  ])).catch(syncAfterError);
+  // Upvotes → reviews → vendor (FK order), as ONE transaction. Previously the
+  // last two ran concurrently and the whole cascade was three separate requests,
+  // so a failure anywhere left the directory half-deleted — most often a vendor
+  // row gone while its reviews survived, pointing at nothing and unreachable
+  // from the UI that would delete them.
+  //
+  // The upvote ids are listed explicitly rather than via a subquery:
+  // review_upvotes and reviews are both row-policy-governed, and the rewriter
+  // fails closed on a governed table referenced inside a subquery. `IN (...)`
+  // is chunked to stay under the runtime's 100-parameter cap.
+  const upvoteDeletes = [];
+  for (let i = 0; i < reviewIds.length; i += MAX_SQL_PARAMS) {
+    const chunk = reviewIds.slice(i, i + MAX_SQL_PARAMS);
+    upvoteDeletes.push({
+      sql: `DELETE FROM app_vendors__review_upvotes WHERE review_id IN (${chunk.map(() => "?").join(",")})`,
+      params: chunk,
+    });
+  }
+  const tail = [
+    { sql: `DELETE FROM app_vendors__reviews WHERE vendor_id = ?`, params: [vendorId] },
+    { sql: `DELETE FROM app_vendors__vendors WHERE id = ?`, params: [vendorId] },
+  ];
+  (async () => {
+    // A vendor with more than ~800 reviews needs more statements than one batch
+    // takes; its upvotes then go out in leading batches. Orphaned upvotes are
+    // the one harmless intermediate state (invisible, and re-deletable), so the
+    // pair that must not split — reviews and the vendor row — always travels
+    // together in the final batch.
+    while (upvoteDeletes.length > MAX_BATCH_STATEMENTS - tail.length) {
+      await dbBatch(upvoteDeletes.splice(0, MAX_BATCH_STATEMENTS));
+    }
+    await dbBatch([...upvoteDeletes, ...tail]);
+  })().catch(syncAfterError);
 };
 
 // ─── Review form ──────────────────────────────────────────────────────────
@@ -589,10 +642,13 @@ window.deleteReview = async function(reviewId) {
   myUpvotes.delete(reviewId);
   allReviews = allReviews.filter(r => r.id !== reviewId);
   if (r) openVendorDetailById(r.vendor_id);
-  // Upvotes must be deleted before review due to FK constraint
-  db(`DELETE FROM app_vendors__review_upvotes WHERE review_id = ?`, [reviewId])
-    .then(() => db(`DELETE FROM app_vendors__reviews WHERE id = ?`, [reviewId]))
-    .catch(syncAfterError);
+  // Upvotes must be deleted before the review (FK), and as one transaction —
+  // otherwise a failure between them leaves upvote rows referencing a review
+  // that no longer exists, inflating nothing visible but never collected.
+  dbBatch([
+    { sql: `DELETE FROM app_vendors__review_upvotes WHERE review_id = ?`, params: [reviewId] },
+    { sql: `DELETE FROM app_vendors__reviews WHERE id = ?`, params: [reviewId] },
+  ]).catch(syncAfterError);
 };
 
 // ─── Vendor detail modal ──────────────────────────────────────────────────

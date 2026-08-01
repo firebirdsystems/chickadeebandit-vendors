@@ -29,6 +29,11 @@
     "mode": "read",
     "db_exports": ["all_vendors"]
   },
+  "member_references": {
+    "vendors": { "column": "added_by", "on_removed": "keep" },
+    "reviews": { "column": "member_id", "on_removed": "keep" },
+    "review_upvotes": { "column": "member_id", "on_removed": "delete", "id_column": "rowid" }
+  },
   "row_policies": {
     "vendors": {
       "kind": "owner_or_visibility",

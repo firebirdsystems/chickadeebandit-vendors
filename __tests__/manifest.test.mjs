@@ -102,3 +102,20 @@ if (manifest.ai_access) {
     });
   }
 }
+
+// Member removal (manifest.member_references). This is a shared directory:
+// "the plumber was great" is knowledge the household keeps after its author
+// leaves, and visibility = 'everyone' keeps such a review readable while
+// owner_or_visibility still lets an adult moderate it — so the review and its
+// author id stay. Upvotes are a live tally rather than content, so a departed
+// member's vote is removed; the table is keyed (review_id, member_id) with no
+// `id` column, hence rowid.
+describe("member_references", () => {
+  it("keeps reviews as household knowledge and drops their upvotes", () => {
+    expect(manifest.member_references).toEqual({
+      vendors: { column: "added_by", on_removed: "keep" },
+      reviews: { column: "member_id", on_removed: "keep" },
+      review_upvotes: { column: "member_id", on_removed: "delete", id_column: "rowid" },
+    });
+  });
+});
