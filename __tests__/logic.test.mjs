@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating } from "../src/logic.js";
+import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating, searchableFields } from "../src/logic.js";
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────
 
@@ -114,36 +114,44 @@ describe("filterVendors", () => {
   ];
 
   it("returns all vendors when category is 'all'", () => {
-    const result = filterVendors(vendors, reviews, "all", "");
+    const result = filterVendors(vendors, reviews, "all");
     expect(result.map(v => v.id)).toHaveLength(3);
   });
 
   it("filters by category", () => {
-    const result = filterVendors(vendors, reviews, "Plumber", "");
+    const result = filterVendors(vendors, reviews, "Plumber");
     expect(result.every(v => v.category === "Plumber")).toBe(true);
     expect(result).toHaveLength(2);
   });
 
-  it("filters by search query on name", () => {
-    const result = filterVendors(vendors, reviews, "all", "sparky");
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("v2");
-  });
-
   it("sorts by average rating descending", () => {
-    const result = filterVendors(vendors, reviews, "all", "");
+    const result = filterVendors(vendors, reviews, "all");
     expect(result[0].id).toBe("v2"); // rating 5
     expect(result[1].id).toBe("v1"); // rating 4
     expect(result[2].id).toBe("v3"); // rating 3
   });
 
   it("returns empty array when nothing matches", () => {
-    expect(filterVendors(vendors, reviews, "Landscaper", "")).toHaveLength(0);
+    expect(filterVendors(vendors, reviews, "Landscaper")).toHaveLength(0);
   });
 
   it("does not mutate the input array", () => {
     const copy = [...vendors];
-    filterVendors(vendors, reviews, "all", "");
+    filterVendors(vendors, reviews, "all");
     expect(vendors).toEqual(copy);
+  });
+});
+
+// ── searchableFields ──────────────────────────────────────────────────────────
+
+describe("searchableFields", () => {
+  it("matches on phone, address and notes, not just the name", () => {
+    const fields = searchableFields({
+      name: "Sparky Electric", category: "Electrician", phone: "555-0110",
+      address: "8 Mill Rd", notes: "did the fusebox in 2024",
+    });
+    expect(fields).toContain("555-0110");
+    expect(fields).toContain("8 Mill Rd");
+    expect(fields).toContain("did the fusebox in 2024");
   });
 });

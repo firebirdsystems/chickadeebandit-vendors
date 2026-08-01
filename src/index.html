@@ -261,8 +261,8 @@
 <div class="app" id="root"><div class="loading">Loading…</div></div>
 
 <script type="module">
-import { hubAlert, memberColor, initial, esc, hubConfirm } from "/hub-sdk.js";
-import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating } from "./logic.js";
+import { hubAlert, memberColor, initial, esc, hubConfirm, searchMatch } from "/hub-sdk.js";
+import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating, searchableFields } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
@@ -420,7 +420,8 @@ function categoryBadge(cat) {
 }
 
 function filteredVendors() {
-  return filterVendors(vendors, allReviews, activeCategory, searchQuery);
+  const inCategory = filterVendors(vendors, allReviews, activeCategory);
+  return searchQuery ? inCategory.filter(v => searchMatch(searchQuery, searchableFields(v))) : inCategory;
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────

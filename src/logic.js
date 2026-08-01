@@ -28,17 +28,22 @@ export function starsInfo(rating) {
   return { full, empty, noRating: false };
 }
 
-export function filterVendors(vendors, reviews, activeCategory, searchQuery) {
-  return vendors.filter(v => {
-    const matchesCat = activeCategory === "all" || v.category === activeCategory;
-    const q = (searchQuery || "").toLowerCase();
-    const matchesSearch = !q ||
-      (v.name || "").toLowerCase().includes(q) ||
-      (v.category || "").toLowerCase().includes(q) ||
-      (v.address || "").toLowerCase().includes(q) ||
-      (v.notes || "").toLowerCase().includes(q);
-    return matchesCat && matchesSearch;
-  }).sort((a, b) => {
+/**
+ * Fields the in-app search matches against (see hub-sdk `searchMatch`). The
+ * phone number is in here as well as the address: "who did we use for the
+ * boiler" is as often a half-remembered number as it is a name.
+ */
+export function searchableFields(vendor) {
+  return [vendor.name, vendor.category, vendor.address, vendor.phone, vendor.notes];
+}
+
+/**
+ * Category filter + best-rated-first ordering. Text search is applied by the
+ * caller with the shared matcher over `searchableFields`.
+ */
+export function filterVendors(vendors, reviews, activeCategory) {
+  return vendors.filter(v => activeCategory === "all" || v.category === activeCategory)
+    .sort((a, b) => {
     const ra = avgRating(reviews.filter(r => r.vendor_id === a.id)) ?? -1;
     const rb = avgRating(reviews.filter(r => r.vendor_id === b.id)) ?? -1;
     return rb - ra || new Date(b.created_at) - new Date(a.created_at);
