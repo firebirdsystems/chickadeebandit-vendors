@@ -17,6 +17,57 @@
     "requires_approval": false
   },
   "storage": "db",
+  "automation_actions": {
+    "add_vendor": {
+      "title": "Add a vendor to the directory",
+      "description": "Record a trade or service when another app's event fires — whoever handled a maintenance request, a repair, or a recommended job.",
+      "params": {
+        "added_by": {
+          "type": "member",
+          "label": "Added by",
+          "required": true
+        },
+        "name": {
+          "type": "text",
+          "label": "Business name",
+          "required": true
+        },
+        "category": {
+          "type": "text",
+          "label": "Trade",
+          "default": "Other",
+          "options": ["Contractor", "Handyman", "HVAC", "Landscaper", "Painter", "Plumber", "Electrician", "Septic", "Trash", "Service", "Other"]
+        },
+        "phone": {
+          "type": "text",
+          "label": "Phone",
+          "default": ""
+        }
+      },
+      "dedupe": {
+        "table": "vendors",
+        "column": "source_event_id"
+      },
+      "steps": [
+        {
+          "op": "insert",
+          "table": "vendors",
+          "values": {
+            "id": "$uuid",
+            "name": ":name",
+            "category": ":category",
+            "phone": ":phone",
+            "added_by": ":added_by",
+            "created_at": "$now",
+            "updated_at": "$now",
+            "source_event_id": "$event_id"
+          }
+        }
+      ]
+    }
+  },
+  "publishes": ["vendor.added"],
+  "publish_acls": {"vendor.added": {"require_role": "member"}},
   "nav": {
     "label": "Vendors"
   },

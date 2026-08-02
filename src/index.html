@@ -268,6 +268,22 @@ const CONTEXT = window.__CONTEXT_URL ?? "";
 const DB      = window.__DB_URL      ?? "";
 const APP_ID  = window.__APP_ID      ?? "vendors";
 const ME      = window.__CURRENT_MEMBER ?? null;
+
+const EVENTS = window.__EVENTS_URL ?? "";
+
+async function publishEvent(type, subjectId, payload = {}) {
+  if (!EVENTS) return;
+  try {
+    await fetch(EVENTS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, subject_id: subjectId, payload }),
+    });
+  } catch {
+    // Best-effort: the row is already written, so a failed publish is not fatal.
+  }
+}
+
 // Who moderates the directory: the row policies let the creator OR a
 // *supervisor* edit/delete a vendor. Supervision is not the same thing as
 // "adult" in both tenant kinds — in a household every adult supervises, but in
@@ -764,6 +780,11 @@ async function addVendor(fields) {
           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [rid, id, ME?.id ?? "", fields.rating, fields.comment, now, now]);
     }
+    await publishEvent("vendor.added", id, {
+      name: fields.name,
+      category: fields.category,
+      added_by: ME?.id ?? "",
+    });
   } catch (e) {
     await syncAfterError(e);
   }
