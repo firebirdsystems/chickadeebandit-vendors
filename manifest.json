@@ -17,6 +17,11 @@
     "requires_approval": false
   },
   "storage": "db",
+  "preload": {
+    "vendors": {"sql": "SELECT * FROM app_vendors__vendors ORDER BY created_at DESC LIMIT 500"},
+    "reviews": {"sql": "SELECT * FROM app_vendors__reviews ORDER BY created_at ASC LIMIT 500"},
+    "review_upvotes": {"sql": "SELECT review_id, COUNT(*) as n FROM app_vendors__review_upvotes GROUP BY review_id"}
+  },
   "automation_actions": {
     "add_vendor": {
       "title": "Add a vendor to the directory",
