@@ -392,6 +392,15 @@ async function loadData() {
     db(`SELECT * FROM app_vendors__vendors ORDER BY created_at DESC LIMIT 500`),
     db(`SELECT * FROM app_vendors__reviews ORDER BY created_at ASC LIMIT 500`),
     ME ? db(`SELECT review_id FROM app_vendors__review_upvotes WHERE member_id = ?`, [ME.id]) : Promise.resolve({ rows: [] }),
+    // DO NOT fold this into a denormalized `upvotes` column on the review row.
+    // It was tried and reverted: upvoting is by definition someone ELSE's review,
+    // but `reviews` is owner_or_visibility, so a caller who is not a supervisor
+    // has `AND member_id = <caller>` appended to the bump and it matches no row —
+    // the vote row lands, the badge never moves. In a household that is every
+    // child; in a shared space isSupervisor is admin-only, so it is every ordinary
+    // adult participant too. Triggers are rejected by the migration validator and
+    // column_write_acls can only restrict a column, never grant it, so the app has
+    // no way to maintain the column it would be reading.
     db(`SELECT review_id, COUNT(*) as n FROM app_vendors__review_upvotes GROUP BY review_id`),
   ]);
   vendors      = v.rows ?? [];
