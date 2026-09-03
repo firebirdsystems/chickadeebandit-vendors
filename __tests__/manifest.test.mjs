@@ -119,3 +119,86 @@ describe("member_references", () => {
     });
   });
 });
+
+// ── write_effects ────────────────────────────────────────────────────────────
+// `reviews.upvotes` is maintained by hub-appended effect SQL on
+// `review_upvotes`. Three things about that pairing fail LATE and quietly if
+// they drift, so they are pinned here rather than discovered at publish or in
+// production:
+//
+//  1. an effect may not assign a derived value to an encrypted column, so the
+//     computed column must be in db_plaintext_columns (admission refuses the
+//     app otherwise — a failed release, not a failed test);
+//  2. the effect is only half the mechanism: without `writable_by: []` on
+//     `upvotes`, any member could still forge a total by hand;
+//  3. declaring insert effects CONSTRAINS this app's own client SQL from that
+//     release on — every INSERT into `review_upvotes` must be single-row VALUES
+//     with named columns, no upsert, and must name `review_id`. Admission
+//     cannot see the bundle's SQL, so nothing warns at publish: a drifted
+//     INSERT starts 400ing the moment the release installs.
+describe("write_effects", () => {
+  const effects = manifest.write_effects ?? {};
+  const source = readFileSync(join(__dirname, "../src/index.html"), "utf-8");
+  const prefix = `app_${manifest.id.replace(/-/g, "_")}__`;
+
+  it("declares the upvote counter effect on both verbs", () => {
+    expect(Object.keys(effects)).toEqual(["review_upvotes"]);
+    // The delete verb is what keeps the total honest when rows are removed by
+    // a lane other than a fresh vote — above all member_references cleanup,
+    // which deletes a departing member's votes and, before the hub fired
+    // effects there, left every review they had upvoted permanently inflated
+    // (and mis-ranked, since "top" sorts on this column).
+    expect(Object.keys(effects.review_upvotes).sort()).toEqual(["delete", "insert"]);
+  });
+
+  // The counterpart the delete verb imposes on this app's own SQL: a batch may
+  // not carry two DELETEs on one effect-bearing table, because the second's key
+  // capture runs after the first has removed its rows. confirmDeleteVendor
+  // chunks its upvote deletes, so all but the last must leave the batch.
+  it("never batches two DELETEs on the trigger table", () => {
+    const teardown = source.slice(source.indexOf("window.confirmDeleteVendor"));
+    const body = teardown.slice(0, teardown.indexOf("\n};"));
+    expect(body).toContain("const last = upvoteDeletes.pop();");
+    expect(body).toMatch(/for \(const statement of upvoteDeletes\) await dbBatch\(\[statement\]\)/);
+    // The last chunk still rides with the pair that must not split.
+    expect(body).toContain("dbBatch(last ? [last, ...tail] : tail)");
+    expect(body).not.toMatch(/dbBatch\(\[\.\.\.upvoteDeletes/);
+  });
+
+  it("computes only a plaintext column, locked against every client", () => {
+    for (const effect of effects.review_upvotes.insert) {
+      const [, target, column] = effect.statement.match(/^UPDATE\s+(\w+)\s+SET\s+(\w+)\s*=/) ?? [];
+      expect(target, `${effect.label} target`).toBeTruthy();
+      expect(manifest.db_plaintext_columns ?? [], `${column} is effect-computed`).toContain(column);
+      const acl = manifest.row_policies[target.slice(prefix.length)]?.column_write_acls?.[column];
+      expect(acl?.writable_by, `${column} must be client-immutable`).toEqual([]);
+      // A lock limited to `actions: ["update"]` would still let an INSERT set
+      // the column; no INSERT here names it, so both actions.
+      expect(acl.actions, `${column} lock covers insert and update`).toBeUndefined();
+      // Recompute, never accumulate — that is what self-heals the lanes that
+      // delete vote rows without firing effects (member_references removal).
+      expect(effect.statement).toMatch(/=\s*\(SELECT\s+COUNT\(\*\)/i);
+    }
+  });
+
+  it("never writes the effect-maintained column from client SQL", () => {
+    expect(source.includes("SET upvotes")).toBe(false);
+  });
+
+  it("keeps every client INSERT into the trigger table in the shape effects require", () => {
+    const needed = effects.review_upvotes.insert.flatMap((e) =>
+      [...e.statement.matchAll(/:new\.(\w+)/g)].map((m) => m[1]));
+    const inserts = [...source.matchAll(
+      new RegExp(`INSERT(\\s+OR\\s+\\w+)?\\s+INTO\\s+${prefix}review_upvotes\\s*\\(([^)]*)\\)([\\s\\S]{0,300})`, "g"),
+    )];
+    expect(inserts.length, "no client INSERT into review_upvotes found — the scan drifted").toBeGreaterThan(0);
+    for (const [, orClause, columns, tail] of inserts) {
+      expect(orClause, "INSERT OR … is refused on an effect table").toBeUndefined();
+      const named = columns.split(",").map((c) => c.trim());
+      for (const column of needed) expect(named, `INSERT must name ${column}`).toContain(column);
+      const values = tail.slice(0, tail.indexOf(";") === -1 ? tail.length : tail.indexOf(";"));
+      expect(/ON\s+CONFLICT/i.test(values), "INSERT may not upsert").toBe(false);
+      expect(values.match(/VALUES\s*\((?:\s*\?\s*,)*\s*\?\s*\)/i), "must be single-row VALUES of ? params").toBeTruthy();
+    }
+  });
+});

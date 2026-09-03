@@ -19,9 +19,9 @@
   "storage": "db",
   "preload": {
     "vendors": {"sql": "SELECT * FROM app_vendors__vendors ORDER BY created_at DESC LIMIT 500"},
-    "reviews": {"sql": "SELECT * FROM app_vendors__reviews ORDER BY created_at ASC LIMIT 500"},
-    "review_upvotes": {"sql": "SELECT review_id, COUNT(*) as n FROM app_vendors__review_upvotes GROUP BY review_id"}
+    "reviews": {"sql": "SELECT * FROM app_vendors__reviews ORDER BY created_at ASC LIMIT 500"}
   },
+  "db_plaintext_columns": ["upvotes"],
   "automation_actions": {
     "add_vendor": {
       "title": "Add a vendor to the directory",
@@ -102,6 +102,9 @@
       "member_column": "member_id",
       "visibility_column": "visibility",
       "everyone_values": ["everyone"],
+      "column_write_acls": {
+        "upvotes": { "writable_by": [] }
+      },
       "max_per_member": {
         "member_column": "member_id",
         "scope_columns": ["vendor_id"],
@@ -118,6 +121,23 @@
         "scope_columns": ["review_id"],
         "limit": 1
       }
+    }
+  },
+  "write_effects": {
+    "review_upvotes": {
+      "insert": [
+        {
+          "label": "upvote_count",
+          "statement": "UPDATE app_vendors__reviews SET upvotes = (SELECT COUNT(*) FROM app_vendors__review_upvotes u WHERE u.review_id = app_vendors__reviews.id) WHERE id = :new.review_id"
+        }
+      ],
+      "delete": [
+        {
+          "label": "upvote_count",
+          "bind": "review_id",
+          "statement": "UPDATE app_vendors__reviews SET upvotes = (SELECT COUNT(*) FROM app_vendors__review_upvotes u WHERE u.review_id = app_vendors__reviews.id) WHERE id IN :affected"
+        }
+      ]
     }
   }
 }
