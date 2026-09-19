@@ -19,7 +19,7 @@
       --green:  #16a34a; --green-light:  #dcfce7;
       --amber:  #d97706; --amber-light:  #fef3c7;
       --blue:   #2563eb; --blue-light:   #dbeafe;
-      --red:    #dc2626; --red-light:    #fee2e2;
+      --red:    #dc2626; --red-ink: var(--hub-tint-danger-fg, #dc2626); --red-light:    #fee2e2;
       --radius: var(--hub-radius, 0.5rem);
       --shadow: 0 1px 3px rgba(0,0,0,.07);
     }
@@ -44,7 +44,7 @@
       padding: 16px 20px;
       background: var(--accent);
       border-radius: var(--radius);
-      color: white;
+      color: var(--accent-fg);
     }
     header h1 { font-size: 1.2rem; font-weight: 700; }
     header .sub { font-size: 0.8rem; opacity: .75; margin-top: 2px; }
@@ -57,7 +57,7 @@
       cursor: pointer; border: none; transition: opacity .15s;
     }
     .btn:disabled { opacity: .5; cursor: default; }
-    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary { background: var(--accent); color: var(--accent-fg); }
     .btn-primary:hover:not(:disabled) { opacity: .88; }
     .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
     .btn-ghost:hover { border-color: var(--text); color: var(--text); }
@@ -66,7 +66,7 @@
     .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
     .btn-link-danger {
       background: none; border: none; cursor: pointer;
-      font-size: 0.78rem; color: var(--red); font-weight: 500; padding: 4px 6px;
+      font-size: 0.78rem; color: var(--red-ink); font-weight: 500; padding: 4px 6px;
     }
     .btn-link-danger:hover { text-decoration: underline; }
 
@@ -87,7 +87,7 @@
       color: var(--muted); transition: all .15s;
     }
     .cat-pill:hover { border-color: var(--accent); color: var(--text); }
-    .cat-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .cat-pill.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 
     /* ── Vendor cards ────────────────────────────────── */
     .vendor-card {
@@ -113,15 +113,15 @@
     .cat-badge {
       font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
       border-radius: 20px; white-space: nowrap;
-      background: #f3f4f6; color: #374151;
+      background: var(--bg); color: var(--text);
     }
-    .cat-badge.cat-contractor   { background: #dbeafe; color: #1d4ed8; }
-    .cat-badge.cat-handyman     { background: #fef3c7; color: #b45309; }
-    .cat-badge.cat-landscaper   { background: #dcfce7; color: #15803d; }
-    .cat-badge.cat-plumber      { background: #e0f2fe; color: #0369a1; }
+    .cat-badge.cat-contractor   { background: var(--hub-tint-info, #dbeafe); color: var(--hub-tint-info-fg, #1d4ed8); }
+    .cat-badge.cat-handyman     { background: var(--hub-tint-warning, #fef3c7); color: var(--hub-tint-warning-fg, #b45309); }
+    .cat-badge.cat-landscaper   { background: var(--hub-tint-success, #dcfce7); color: var(--hub-tint-success-fg, #15803d); }
+    .cat-badge.cat-plumber      { background: var(--hub-tint-info, #e0f2fe); color: var(--hub-tint-info-fg, #0369a1); }
     .cat-badge.cat-electrician  { background: #fef9c3; color: #a16207; }
-    .cat-badge.cat-service      { background: #f3e8ff; color: #7e22ce; }
-    .cat-badge.cat-other        { background: #f3f4f6; color: #374151; }
+    .cat-badge.cat-service      { background: var(--hub-tint-accent, #f3e8ff); color: var(--hub-tint-accent-fg, #7e22ce); }
+    .cat-badge.cat-other        { background: var(--bg); color: var(--text); }
 
     /* ── Stars ───────────────────────────────────────── */
     .stars { color: #f59e0b; font-size: 0.85rem; letter-spacing: 1px; }
@@ -158,7 +158,7 @@
       .modal-backdrop { align-items: center; padding: 20px; }
     }
     .modal {
-      background: white; border-radius: var(--radius) var(--radius) 0 0;
+      background: var(--card); border-radius: var(--radius) var(--radius) 0 0;
       width: 100%; max-width: 520px; padding: 24px;
       max-height: 92vh; overflow-y: auto;
     }
@@ -177,13 +177,13 @@
     .form-group textarea {
       width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
       padding: 9px 12px; font-size: 0.95rem; font-family: inherit;
-      outline: none; transition: border-color .15s; background: white;
+      outline: none; transition: border-color .15s; background: var(--card);
     }
     .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus { border-color: var(--accent); }
     .form-group textarea { resize: vertical; min-height: 60px; }
-    .req { color: var(--red); }
+    .req { color: var(--red-ink); }
 
     .modal-actions {
       display: flex; gap: 8px; margin-top: 20px;
@@ -201,7 +201,7 @@
 
     .contact-grid {
       display: flex; flex-direction: column; gap: 6px;
-      background: #f9fafb; border: 1px solid var(--border);
+      background: var(--bg); border: 1px solid var(--border);
       border-radius: 8px; padding: 12px; margin-bottom: 12px;
     }
     .contact-item {
@@ -245,7 +245,7 @@
       transition: all .15s;
     }
     .upvote-btn:hover:not(.upvoted):not(.disabled) { border-color: var(--accent); color: var(--accent); }
-    .upvote-btn.upvoted { border-color: var(--accent); background: #f0f0f0; color: var(--accent); cursor: default; }
+    .upvote-btn.upvoted { border-color: var(--accent); background: var(--bg); color: var(--accent); cursor: default; }
     .upvote-btn.disabled { cursor: default; opacity: .6; }
 
     .no-reviews { font-size: 0.875rem; color: var(--muted); padding: 12px 0; display: flex; align-items: center; gap: 10px; }
