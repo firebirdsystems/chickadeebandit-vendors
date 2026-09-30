@@ -38,6 +38,151 @@
           "expect": { "status": 403 }
         }
       ]
+    },
+    {
+      "name": "in a shared space a participant adult cannot edit or remove another member's vendor, review or upvote, while the steward can",
+      "context": "shared_space",
+      "members": { "a": "adult", "b": "adult", "steward": "admin" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vendors__vendors (id, name, category, notes, added_by, created_at, updated_at) VALUES ('v-b', 'Ace Plumbing', 'plumbing', '', ?, '2026-09-01T09:00:00Z', '2026-09-01T09:00:00Z')",
+          "params": ["{{b}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, created_at, updated_at) VALUES ('rv-b', 'v-b', ?, 5, '2026-09-02T09:00:00Z', '2026-09-02T09:00:00Z')",
+          "params": ["{{b}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id) VALUES ('rv-b', ?)",
+          "params": ["{{b}}"]
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT id FROM app_vendors__vendors",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "id": "v-b" }] }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_vendors__vendors SET notes = 'overcharged' WHERE id = 'v-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_vendors__reviews SET rating = 1 WHERE id = 'rv-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "DELETE FROM app_vendors__review_upvotes WHERE review_id = 'rv-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT v.notes, r.rating FROM app_vendors__vendors v JOIN app_vendors__reviews r ON r.vendor_id = v.id WHERE v.id = 'v-b'",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "notes": "", "rating": 5 }] }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT review_id FROM app_vendors__review_upvotes",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "review_id": "rv-b" }] }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "UPDATE app_vendors__vendors SET notes = 'licensed' WHERE id = 'v-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "UPDATE app_vendors__reviews SET rating = 4 WHERE id = 'rv-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "DELETE FROM app_vendors__review_upvotes WHERE review_id = 'rv-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT v.notes, r.rating FROM app_vendors__vendors v JOIN app_vendors__reviews r ON r.vendor_id = v.id WHERE v.id = 'v-b'",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "notes": "licensed", "rating": 4 }] }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT review_id FROM app_vendors__review_upvotes",
+          "expect": { "status": 200, "rowCount": 0 }
+        }
+      ]
+    },
+    {
+      "name": "in a household an adult may edit another adult's vendor and review",
+      "members": { "a": "adult", "b": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vendors__vendors (id, name, category, notes, added_by, created_at, updated_at) VALUES ('v-b', 'Ace Plumbing', 'plumbing', '', ?, '2026-09-01T09:00:00Z', '2026-09-01T09:00:00Z')",
+          "params": ["{{b}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, created_at, updated_at) VALUES ('rv-b', 'v-b', ?, 5, '2026-09-02T09:00:00Z', '2026-09-02T09:00:00Z')",
+          "params": ["{{b}}"]
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_vendors__vendors SET notes = 'closed Sundays' WHERE id = 'v-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "UPDATE app_vendors__reviews SET rating = 4 WHERE id = 'rv-b'",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT v.notes, r.rating FROM app_vendors__vendors v JOIN app_vendors__reviews r ON r.vendor_id = v.id WHERE v.id = 'v-b'",
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "notes": "closed Sundays", "rating": 4 }] }
+        }
+      ]
+    },
+    {
+      "name": "on this adults-only app a granted child can run the AI named query while an ungranted child is refused",
+      "members": { "parent": "adult", "kid": "child", "kid2": "child" },
+      "granted": ["kid"],
+      "steps": [
+        {
+          "action": "named",
+          "as": "kid",
+          "kind": "query",
+          "name": "all_vendors",
+          "params": [],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "named",
+          "as": "kid2",
+          "kind": "query",
+          "name": "all_vendors",
+          "params": [],
+          "expect": { "status": 403, "errorIncludes": "not available" }
+        }
+      ]
     }
   ]
 }
