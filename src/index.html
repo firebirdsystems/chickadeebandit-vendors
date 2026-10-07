@@ -261,7 +261,7 @@
 <div class="app" id="root"><div class="loading">Loading…</div></div>
 
 <script type="module">
-import { hubAlert, memberColor, initial, esc, hubConfirm, searchMatch } from "/hub-sdk.js";
+import { hubAlert, memberColor, initial, esc, hubConfirm, searchMatch, glyph } from "/hub-sdk.js";
 import { CATEGORIES, avgRating, starsInfo, filterVendors, clampRating, searchableFields } from "./logic.js";
 
 const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -720,7 +720,7 @@ function openVendorDetail(vendor) {
               <button
                 class="upvote-btn ${upvoted ? "upvoted" : ""} ${!canUpvote && !upvoted ? "disabled" : ""}"
                 onclick="${canUpvote ? `upvoteReview(${jsArg(r.id)})` : ""}">
-                👍 ${upvoteCounts.get(r.id) ?? 0}
+                ${glyph("thumbs-up")} ${upvoteCounts.get(r.id) ?? 0}
               </button>
               ${ismine ? `<button class="btn btn-ghost btn-sm" onclick="openReviewForm(${jsArg(vendor.id)})">Edit</button>` : ""}
               ${ismine ? `<button class="btn-link-danger" onclick="deleteReview(${jsArg(r.id)})">Delete</button>` : ""}
@@ -744,9 +744,9 @@ function openVendorDetail(vendor) {
 
     ${vendor.phone || vendor.website || vendor.address ? `
     <div class="contact-grid">
-      ${vendor.phone    ? `<a href="tel:${esc(vendor.phone)}" class="contact-item"><span class="contact-icon">📞</span>${esc(vendor.phone)}</a>` : ""}
-      ${vendor.website  ? `<div class="contact-item"><span class="contact-icon">🌐</span>${websiteLink(vendor.website)}</div>` : ""}
-      ${vendor.address  ? `<div class="contact-item"><span class="contact-icon">📍</span>${esc(vendor.address)}</div>` : ""}
+      ${vendor.phone    ? `<a href="tel:${esc(vendor.phone)}" class="contact-item"><span class="contact-icon">${glyph("phone")}</span>${esc(vendor.phone)}</a>` : ""}
+      ${vendor.website  ? `<div class="contact-item"><span class="contact-icon">${glyph("link")}</span>${websiteLink(vendor.website)}</div>` : ""}
+      ${vendor.address  ? `<div class="contact-item"><span class="contact-icon">${glyph("location")}</span>${esc(vendor.address)}</div>` : ""}
     </div>` : ""}
 
     ${vendor.notes ? `<p class="vendor-notes-detail">${esc(vendor.notes)}</p>` : ""}
@@ -837,9 +837,9 @@ function renderVendorCard(v) {
         </div>
         ${v.phone || v.website ? `
         <div class="vendor-contact">
-          ${v.phone  ? `📞 <a href="tel:${esc(v.phone)}" onclick="event.stopPropagation()">${esc(v.phone)}</a>` : ""}
+          ${v.phone  ? `${glyph("phone")} <a href="tel:${esc(v.phone)}" onclick="event.stopPropagation()">${esc(v.phone)}</a>` : ""}
           ${v.phone && v.website ? " · " : ""}
-          ${v.website ? `🌐 ${websiteLink(v.website, true)}` : ""}
+          ${v.website ? `${glyph("link")} ${websiteLink(v.website, true)}` : ""}
         </div>` : ""}
       </div>
     </div>`;
@@ -863,7 +863,7 @@ function render() {
   document.getElementById("root").innerHTML = `
     <header>
       <div>
-        <h1>🏪 Vendor Recommendations</h1>
+        <h1>${glyph("storefront")} Vendor Recommendations</h1>
         <div class="sub">Local contractors, handymen &amp; service providers</div>
       </div>
       ${ME ? `<button class="btn btn-ghost"
