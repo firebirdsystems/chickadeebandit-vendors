@@ -1,0 +1,425 @@
+{
+ "seed": [
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-58 days'), ?)",
+   "params": [
+    "vnd-v1",
+    "Brightside Plumbing",
+    "Plumber",
+    "555-0142",
+    "https://brightsideplumbing.example",
+    "41 Mill Road",
+    "Ask for Tom. Same day for leaks.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, address, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-55 days'), ?)",
+   "params": [
+    "vnd-v2",
+    "Northgate Electric",
+    "Electrician",
+    "555-0177",
+    "9 Quarry Lane",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-52 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-52 days'), ?)",
+   "params": [
+    "vnd-v3",
+    "Harlow Heating and Air",
+    "HVAC",
+    "555-0119",
+    "https://harlowhvac.example",
+    "Annual service contract, renews in spring.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-49 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-49 days'), ?)",
+   "params": [
+    "vnd-v4",
+    "Green Thumb Lawn Care",
+    "Landscaper",
+    "555-0163",
+    "Mows every other Thursday.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-45 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-45 days'), ?)",
+   "params": [
+    "vnd-v5",
+    "Castillo Painting",
+    "Painter",
+    "555-0108",
+    "https://castillopainting.example",
+    "220 Elm Street",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-41 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-41 days'), ?)",
+   "params": [
+    "vnd-v6",
+    "Handy Dan",
+    "Handyman",
+    "555-0191",
+    "Good for small jobs: doors, shelves, caulking.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-38 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-38 days'), ?)",
+   "params": [
+    "vnd-v7",
+    "Ridgeline Roofing",
+    "Contractor",
+    "555-0135",
+    "https://ridgelineroofing.example",
+    "77 Summit Avenue",
+    "Ten year workmanship warranty on the 2024 roof.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, address, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-34 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-34 days'), ?)",
+   "params": [
+    "vnd-v8",
+    "Clearwater Septic",
+    "Septic",
+    "555-0150",
+    "Route 9, north of town",
+    "Pump every three years.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days'), ?)",
+   "params": [
+    "vnd-v9",
+    "Metro Waste Pickup",
+    "Trash",
+    "555-0102",
+    "https://metrowaste.example",
+    "Bulk pickup first Monday of the month.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-26 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-26 days'), ?)",
+   "params": [
+    "vnd-v10",
+    "Sparkle Window Cleaning",
+    "Service",
+    "555-0184",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-22 days'), ?)",
+   "params": [
+    "vnd-v11",
+    "Oak and Iron Carpentry",
+    "Contractor",
+    "555-0126",
+    "https://oakandiron.example",
+    "5 Foundry Row",
+    "Built the deck. Booked months ahead.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-18 days'), ?)",
+   "params": [
+    "vnd-v12",
+    "Pine Hollow Tree Service",
+    "Landscaper",
+    "555-0158",
+    "Took down the dead ash by the driveway.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, address, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-14 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-14 days'), ?)",
+   "params": [
+    "vnd-v13",
+    "QuickKey Locksmith",
+    "Service",
+    "555-0139",
+    "12 Station Road",
+    "Open late.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 days'), ?)",
+   "params": [
+    "vnd-v14",
+    "Summit Appliance Repair",
+    "Service",
+    "555-0114",
+    "https://summitappliance.example",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days'), ?)",
+   "params": [
+    "vnd-v15",
+    "Dunmore Chimney Sweep",
+    "Other",
+    "555-0171",
+    "Book before October.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, website, address, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days'), ?)",
+   "params": [
+    "vnd-v16",
+    "Atlas Garage Doors",
+    "Contractor",
+    "555-0196",
+    "https://atlasdoors.example",
+    "300 Commerce Drive",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__vendors (id, name, category, phone, notes, added_by, created_at, updated_at, visibility) VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days'), ?)",
+   "params": [
+    "vnd-v17",
+    "Bluebird Pest Control",
+    "Service",
+    "555-0123",
+    "Quarterly ant treatment.",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-57 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-57 days'), ?)",
+   "params": [
+    "vnd-r1",
+    "vnd-v1",
+    "{{me}}",
+    "Fixed the burst pipe within two hours and cleaned up after.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-54 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-54 days'), ?)",
+   "params": [
+    "vnd-r2",
+    "vnd-v2",
+    "{{me}}",
+    "Rewired the garage. Tidy work, a little slow to schedule.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-51 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-51 days'), ?)",
+   "params": [
+    "vnd-r3",
+    "vnd-v3",
+    "{{me}}",
+    "Furnace tune up every fall, always on time.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-48 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-48 days'), ?)",
+   "params": [
+    "vnd-r4",
+    "vnd-v4",
+    "{{me}}",
+    "Reliable and fair on price.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-44 days'), ?)",
+   "params": [
+    "vnd-r5",
+    "vnd-v5",
+    "{{me}}",
+    "Painted the whole upstairs in three days. Sharp lines.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-40 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-40 days'), ?)",
+   "params": [
+    "vnd-r6",
+    "vnd-v6",
+    "{{me}}",
+    "Hung the new back door and fixed the sticky window.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-37 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-37 days'), ?)",
+   "params": [
+    "vnd-r7",
+    "vnd-v7",
+    "{{me}}",
+    "Replaced the roof on budget and found the flashing leak.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-33 days'), ?)",
+   "params": [
+    "vnd-r8",
+    "vnd-v8",
+    "{{me}}",
+    "On time and explained the tank condition clearly.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 3, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-29 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-29 days'), ?)",
+   "params": [
+    "vnd-r9",
+    "vnd-v9",
+    "{{me}}",
+    "Fine most weeks, missed two pickups over the holidays.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-25 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-25 days'), ?)",
+   "params": [
+    "vnd-r10",
+    "vnd-v10",
+    "{{me}}",
+    "Did inside and out in an afternoon.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-21 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-21 days'), ?)",
+   "params": [
+    "vnd-r11",
+    "vnd-v11",
+    "{{me}}",
+    "Beautiful built in shelves, worth the wait.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 5, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days'), ?)",
+   "params": [
+    "vnd-r12",
+    "vnd-v12",
+    "{{me}}",
+    "Careful crew, ground the stump too.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-13 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-13 days'), ?)",
+   "params": [
+    "vnd-r13",
+    "vnd-v13",
+    "{{me}}",
+    "Rekeyed three locks in under an hour.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 2, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-9 days'), ?)",
+   "params": [
+    "vnd-r14",
+    "vnd-v14",
+    "{{me}}",
+    "Dishwasher failed again a month after the repair.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__reviews (id, vendor_id, member_id, rating, comment, upvotes, created_at, updated_at, visibility) VALUES (?, ?, ?, 4, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days'), ?)",
+   "params": [
+    "vnd-r15",
+    "vnd-v15",
+    "{{me}}",
+    "Clean job and a clear inspection report.",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r1",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r2",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r3",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r5",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r7",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r11",
+    "{{me}}",
+    "everyone"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_vendors__review_upvotes (review_id, member_id, visibility) VALUES (?, ?, ?)",
+   "params": [
+    "vnd-r15",
+    "{{me}}",
+    "everyone"
+   ]
+  }
+ ]
+}
