@@ -253,6 +253,8 @@
     /* ── Misc ────────────────────────────────────────── */
     .empty { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 0.9rem; }
     .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .load-error { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--hub-tint-danger, #fee2e2); color: var(--hub-tint-danger-fg, #b91c1c); font-size: 0.9rem; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .load-error-retry { background: none; border: 1px solid currentColor; border-radius: 8px; padding: 5px 10px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; flex-shrink: 0; }
     .vendor-count { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
   </style>
   <base href="/run/vendors/" />
@@ -306,6 +308,7 @@ let upvoteCounts = new Map();
 let members      = [];
 let activeCategory = "all";
 let searchQuery    = "";
+let loadFailed     = false; // set when the first load fails
 
 
 // ─── DB helper ────────────────────────────────────────────────────────────
@@ -316,9 +319,9 @@ async function db(sql, params = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sql, params }),
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.error) {
-    throw new Error(body.error ?? `Database request failed (${res.status})`);
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body || typeof body !== "object" || body.error) {
+    throw new Error(body?.error ?? `Database request failed (${res.status})`);
   }
   return body;
 }
@@ -337,9 +340,9 @@ async function dbBatch(statements) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ statements }),
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.error) {
-    throw new Error(body.error ?? `Database request failed (${res.status})`);
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body || typeof body !== "object" || body.error) {
+    throw new Error(body?.error ?? `Database request failed (${res.status})`);
   }
   return body;
 }
@@ -370,10 +373,13 @@ async function loadMembers() {
     ];
     return;
   }
-  try {
-    const res = await fetch(`${CONTEXT}?keys=family.members`);
-    members = ((await res.json())["family.members"]) ?? [];
-  } catch { members = []; }
+  // A roster that could not be read is a failed load, not an empty household.
+  const res = await fetch(`${CONTEXT}?keys=family.members`);
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || typeof json !== "object" || json.error) throw new Error("Could not load the member list");
+  // A 200 can still name a key the hub failed to read: that is a failed load too.
+  if (Array.isArray(json.$errors) && json.$errors.includes("family.members")) throw new Error("Could not load the member list");
+  members = json["family.members"] ?? [];
 }
 
 async function loadData() {
@@ -604,7 +610,10 @@ window.confirmDeleteVendor = async function(vendorId) {
     // single atomic batch it has always been.
     const last = upvoteDeletes.pop();
     for (const statement of upvoteDeletes) await dbBatch([statement]);
-    await dbBatch(last ? [last, ...tail] : tail);
+    const { results } = await dbBatch(last ? [last, ...tail] : tail);
+    // The vendor row is the last statement. Left unchanged, it was not this
+    // member's to remove (or was already gone): reload what the hub holds.
+    if (results.length && results[results.length - 1].changed === 0) throw new Error("This vendor could not be removed.");
   })().catch(syncAfterError);
 };
 
@@ -818,7 +827,10 @@ async function editVendor(vendorId, fields) {
   closeModal();
   render();
   db(`UPDATE app_vendors__vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
-    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId]).catch(syncAfterError);
+    [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId])
+    // Nothing changed: the vendor is gone, or is not this member's to edit.
+    .then(res => { if (DB && res.changed === 0) throw new Error("This vendor could not be changed."); })
+    .catch(syncAfterError);
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────
@@ -854,7 +866,9 @@ function render() {
     return `<button class="cat-pill ${activeCategory === c ? "active" : ""}" onclick="setCategory('${c}')">${label}${count > 0 && c !== "all" ? ` <span style="opacity:.65">${count}</span>` : ""}</button>`;
   }).join("");
 
-  const listHtml = list.length === 0
+  const listHtml = loadFailed
+    ? `<div class="load-error" data-testid="load-error" role="alert"><span>Couldn’t load the directory.</span> <button type="button" class="load-error-retry" data-testid="load-retry" onclick="firstLoad()">Try again</button></div>`
+    : list.length === 0
     ? `<div class="empty">${searchQuery || activeCategory !== "all"
         ? "No vendors match your search."
         : "No vendors yet — add the first one!"}</div>`
@@ -866,7 +880,7 @@ function render() {
         <h1>${glyph("storefront")} Vendor Recommendations</h1>
         <div class="sub">Local contractors, handymen &amp; service providers</div>
       </div>
-      ${ME ? `<button class="btn btn-ghost"
+      ${ME && !loadFailed ? `<button class="btn btn-ghost"
         style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)"
         onclick="openVendorFormById('')">+ Add</button>` : ""}
     </header>
@@ -892,11 +906,16 @@ function handleDeepLink() {
   openVendorDetailById(vendorId);
 }
 
-(async () => {
-  await Promise.all([loadMembers(), loadData()]);
+async function firstLoad() {
+  try {
+    await Promise.all([loadMembers(), loadData()]);
+    loadFailed = false;
+  } catch { loadFailed = true; }
   render();
-  handleDeepLink();
-})();
+  if (!loadFailed) handleDeepLink();
+}
+window.firstLoad = firstLoad;
+firstLoad();
 </script>
 </body>
 </html>
