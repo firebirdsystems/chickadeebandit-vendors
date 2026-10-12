@@ -348,9 +348,12 @@ async function dbBatch(statements) {
 }
 
 // A persisted write failed after an optimistic update — tell the user and resync
-// local state from the server so the UI can't silently diverge.
+// local state from the server so the UI can't silently diverge. Only wording
+// this app wrote for the reader (forUser) is shown; the hub's own error text
+// goes to the console.
 async function syncAfterError(err) {
-  hubAlert(err?.message ?? "Save failed — reloading.");
+  if (!err?.forUser) console.error(err);
+  hubAlert(err?.forUser ? err.message : "Couldn’t save — try again.");
   try { await loadData(); } catch { /* keep last known state */ }
   render();
 }
@@ -613,7 +616,7 @@ window.confirmDeleteVendor = async function(vendorId) {
     const { results } = await dbBatch(last ? [last, ...tail] : tail);
     // The vendor row is the last statement. Left unchanged, it was not this
     // member's to remove (or was already gone): reload what the hub holds.
-    if (results.length && results[results.length - 1].changed === 0) throw new Error("This vendor could not be removed.");
+    if (results.length && results[results.length - 1].changed === 0) throw Object.assign(new Error("This vendor could not be removed."), { forUser: true });
   })().catch(syncAfterError);
 };
 
@@ -829,7 +832,7 @@ async function editVendor(vendorId, fields) {
   db(`UPDATE app_vendors__vendors SET name=?, category=?, phone=?, website=?, address=?, notes=?, updated_at=? WHERE id=?`,
     [fields.name, fields.category, fields.phone, fields.website, fields.address, fields.notes, now, vendorId])
     // Nothing changed: the vendor is gone, or is not this member's to edit.
-    .then(res => { if (DB && res.changed === 0) throw new Error("This vendor could not be changed."); })
+    .then(res => { if (DB && res.changed === 0) throw Object.assign(new Error("This vendor could not be changed."), { forUser: true }); })
     .catch(syncAfterError);
 }
 
